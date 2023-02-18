@@ -36,7 +36,7 @@ jobs:
       - name: Install Test Package
         run: |
           pip install -r requirements.txt
-          pip install dist/scanoss-*.whl
+          pip install dist/scanoss*.whl
 
       - name: Run Tests
         run: python -m unittest tests/winnowing-test.py
