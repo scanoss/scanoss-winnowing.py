@@ -23,3 +23,5 @@ bad*.txt
 *.gz
 *.zip
 local-*.txt
+*.so
+

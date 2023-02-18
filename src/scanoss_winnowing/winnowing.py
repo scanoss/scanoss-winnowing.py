@@ -28,6 +28,7 @@
    https://theory.stanford.edu/~aiken/publications/papers/sigmod03.pdf
 """
 import hashlib
+import pathlib
 import sys
 
 from crc32c import crc32c
@@ -55,7 +56,7 @@ SKIP_SNIPPET_EXT = {  # File extensions to ignore snippets for
     ".o", ".a", ".so", ".obj", ".dll", ".lib", ".out", ".app", ".bin",
     ".lst", ".dat", ".json", ".htm", ".html", ".xml", ".md", ".txt",
     ".doc", ".docx", ".xls", ".xlsx", ".ppt", ".pptx", ".odt", ".ods", ".odp", ".pages", ".key", ".numbers",
-    ".pdf", ".min.js", ".mf"
+    ".pdf", ".min.js", ".mf", ".sum"
 }
 
 
@@ -104,7 +105,7 @@ class Winnowing:
 
     def __init__(self, size_limit: bool = True, debug: bool = False, trace: bool = False, quiet: bool = False,
                  skip_snippets: bool = False, post_size: int = 64, all_extensions: bool = False,
-                 c_accelerated: bool = True,
+                 obfuscate: bool = False, c_accelerated: bool = True
                  ):
         """
         Instantiate Winnowing class
@@ -113,14 +114,17 @@ class Winnowing:
             size_limit: bool
                 Limit the size of a fingerprint to 64k (post size) - Default True
         """
-        self.size_limit = size_limit
         self.debug = debug
         self.trace = trace
         self.quiet = quiet
+        self.size_limit = size_limit
         self.skip_snippets = skip_snippets
         self.max_post_size = post_size * 1024 if post_size > 0 else MAX_POST_SIZE
         self.all_extensions = all_extensions
         self.c_accelerated = c_accelerated
+        self.obfuscate = obfuscate
+        self.ob_count = 1
+        self.file_map = {} if obfuscate else None
 
     @staticmethod
     def _normalize(byte):
@@ -129,7 +133,7 @@ class Winnowing:
         Parameters
         ----------
         byte : int
-          The byte to normalize
+          The byte to normalise
         """
         if byte < ASCII_0:
             return 0
@@ -162,7 +166,7 @@ class Winnowing:
             for ending in SKIP_SNIPPET_EXT:
                 if lower_file.endswith(ending):
                     self.print_trace(f'Skipping snippets due to file ending: {file} - {ending}')
-                    return True;
+                    return True
         src_len = len(src)
         if src_len == 0 or src_len <= MIN_FILE_SIZE:  # Ignore empty or files that are too small
             self.print_trace(f'Skipping snippets as the file is too small: {file} - {src_len}')
@@ -171,15 +175,10 @@ class Winnowing:
         if len(prefix) > 0 and (prefix[0] == "{" or prefix[0] == "["):  # Ignore json
             self.print_trace(f'Skipping snippets as the file appears to be JSON: {file}')
             return True
-        if prefix.startswith("<?xml") or prefix.startswith("<html") or prefix.startswith("<ac3d") or prefix.startswith(
-                "<!doc"):
+        if prefix.startswith("<?xml") or prefix.startswith("<html") or prefix.startswith("<ac3d") or \
+                prefix.startswith("<!doc"):
             self.print_trace(f'Skipping snippets as the file appears to be xml/html/binary: {file}')
             return True  # Ignore xml & html & ac3d
-        index = src.index('\n') if '\n' in src else (
-                    src_len - 1)  # TODO is this still necessary if we hav a binary check?
-        if len(src[0:index]) > MAX_LONG_LINE_CHARS:  # Ignore long lines
-            self.print_trace(f'Skipping snippets due to file line being too long: {file} - {MAX_LONG_LINE_CHARS}')
-            return True
         return False
 
     def wfp_for_file(self, path: str, file: str) -> str:
@@ -213,38 +212,44 @@ class Winnowing:
 
     def wfp_for_contents(self, file: str, bin_file: bool, contents: bytes) -> str:
         """
-        Generate a Winnowing Finger Print (WFP) for the given file contents
+        Generate a Winnowing fingerprint (WFP) for the given file contents
         Parameters
         ----------
-            file: str
-                file to fingerprint
-            contents: bytes
-                file contents
+            :param file: file to fingerprint
+            :param bin_file: binary file or not
+            :param contents: file contents
         Return
         ------
             WFP string
-            :param bin_file:
         """
         file_md5 = hashlib.md5(contents).hexdigest()
         # Print file line
         content_length = len(contents)
-        wfp = 'file={0},{1},{2}\n'.format(file_md5, content_length, file)
+        wfp_filename = file
+        if self.obfuscate:  # hide the real size of the file and its name, but keep the suffix
+            wfp_filename = f'{self.ob_count}{pathlib.Path(file).suffix}'
+            self.ob_count = self.ob_count + 1
+            self.file_map[wfp_filename] = file  # Save the file name map for later (reverse lookup)
+
+        wfp = 'file={0},{1},{2}\n'.format(file_md5, content_length, wfp_filename)
         # We don't process snippets for binaries, or other uninteresting files, or if we're requested to skip
-        if bin_file or self.skip_snippets or self.__skip_snippets(file, contents.decode('utf-8', 'ignore')):
+        if bin_file or self.skip_snippets or\
+                (not self.all_extensions and self.__skip_snippets(file, contents.decode('utf-8', 'ignore'))):
             return wfp
         if self.c_accelerated:
             import _winnowing
+            self.print_trace(f'Using C code...')
             res = _winnowing.compute_wfd(contents, crc32c)
-            return wfp + b''.join(res).decode('ascii') + "\n"
-
+            return wfp + str.lstrip(b''.join(res).decode('ascii')) + "\n"
+        self.print_trace(f'Using Python code...')
         # Initialize variables
         gram = bytearray()
         window = []
         line = 1
         last_hash = MAX_CRC32
         last_line = 0
-        output = ""
-        # Otherwise recurse src_content and calculate Winnowing hashes
+        output = ''
+        # Otherwise, recurse src_content and calculate Winnowing hashes
         for byte in contents:
             if byte == ASCII_LF:
                 line += 1
@@ -271,10 +276,10 @@ class Winnowing:
                             crc = crc32c(min_hash_s)
                             crc_hex = '{:08x}'.format(crc)
                             if last_line != line:
-                                if output:
+                                if output != '':
                                     if self.size_limit and \
-                                            (len(wfp.encode("utf-8")) + len(
-                                                output.encode("utf-8"))) > self.max_post_size:
+                                            (len(wfp.encode("utf-8")) +
+                                             len(output.encode("utf-8"))) > self.max_post_size:
                                         self.print_debug(f'Truncating WFP (64k limit) for: {file}')
                                         output = ''
                                         break  # Stop collecting snippets as it's over 64k
@@ -289,10 +294,14 @@ class Winnowing:
                         window.pop(0)
                     # Shift gram
                     gram = gram[1:]
-        if output and (
-                not self.size_limit or (len(wfp.encode("utf-8")) + len(output.encode("utf-8"))) < self.max_post_size):
-            wfp += output + '\n'
+        if output != '':
+            if not self.size_limit or (len(wfp.encode("utf-8")) + len(output.encode("utf-8"))) < self.max_post_size:
+                wfp += output + '\n'
+            else:
+                self.print_debug(f'Warning: skipping output in WFP for {file} - "{output}"')
 
+        if wfp is None or wfp == '':
+            self.print_stderr(f'Warning: No WFP content data for {file}')
         return wfp
 
     def print_msg(self, *args, **kwargs):
@@ -322,7 +331,6 @@ class Winnowing:
         Print the given message to STDERR
         """
         print(*args, file=sys.stderr, **kwargs)
-
 #
 # End of Winnowing Class
 #
