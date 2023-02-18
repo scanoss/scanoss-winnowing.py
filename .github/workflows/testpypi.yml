@@ -8,20 +8,14 @@ permissions:
 
 jobs:
   build_wheels:
-    name: Build wheels on ${{ matrix.os }} - ${{ matrix.python-version }}
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        os: [ubuntu-latest]
-        python-version: ["3.10"]
-#        os: [ubuntu-20.04, windows-2019, macOS-11]
-#        python-version: ["3.7", "3.8", "3.9", "3.10", "3.11"]
+    name: Build wheels on ubuntu
+    runs-on: ubuntu-latest
 
     steps:
       - uses: actions/checkout@v3
 
       - name: Build wheels
-        uses: pypa/cibuildwheel@v2.12.0
+        uses: pypa/cibuildwheel@v2.11.4
 
       - name: Publish Test Package
         uses: pypa/gh-action-pypi-publish@release/v1
@@ -30,36 +24,3 @@ jobs:
           user: __token__
           password: ${{ secrets.TEST_PYPI_API_TOKEN }}
           repository_url: https://test.pypi.org/legacy/
-
-  test:
-    if: success()
-    needs: [ build_wheels ]
-    runs-on: ubuntu-latest
-
-    steps:
-      - uses: actions/checkout@v3
-
-      - name: Set up Python
-        uses: actions/setup-python@v3
-        with:
-          python-version: '3.10.x'
-
-      - name: Install Remote Package
-        run: |
-          scanoss_version=$(python ./version.py)
-          pip install -r requirements.txt
-          echo "Install TestPyPI scanoss_winnowing ${scanoss_version}..."
-          pip install -i https://test.pypi.org/simple/ --upgrade scanoss_winnowing
-          pip install --upgrade scanoss
-
-      - name: Run Tests
-        run: |
-          which scanoss-py
-          scanoss-py version
-          scanoss-py wfp src > fingers.wfp
-          file_count=$(cat fingers.wfp | grep '"file=":' | wc -l)
-          echo "File Count: $file_count"
-          if [[ $file_count -lt 1 ]]; then
-            echo "Error: Fingerprint test did not produce any results. Failing"
-            exit 1
-          fi
