@@ -47,7 +47,7 @@ jobs:
 
   test:
     if: success()
-    needs: [ deploy ]
+    needs: [ build_wheels ]
     runs-on: ubuntu-latest
 
     steps:
