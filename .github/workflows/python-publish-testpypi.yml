@@ -56,8 +56,8 @@ jobs:
         run: |
           scanoss_version=$(python ./version.py)
           pip install -r requirements.txt
-          echo "Install TestPyPI scanoss-winnowing ${scanoss_version}..."
-          pip install -i https://test.pypi.org/simple/ --upgrade scanoss-winnowing
+          echo "Install TestPyPI scanoss_winnowing ${scanoss_version}..."
+          pip install -i https://test.pypi.org/simple/ --upgrade scanoss_winnowing
           pip install --upgrade scanoss
 
       - name: Run Tests
