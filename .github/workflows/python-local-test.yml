@@ -1,0 +1,42 @@
+name: Build/Test Local Python Package
+# This workflow will build and test the python package locally
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - 'main'
+  pull_request:
+    branches:
+      - 'main'
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v3
+        with:
+          python-version: '3.10.x'
+
+      - name: Install Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements-dev.txt
+
+      - name: Build Local Package
+        run: make dist
+
+      - name: Install Test Package
+        run: |
+          pip install -r requirements.txt
+          pip install dist/scanoss-*.whl
+
+      - name: Run Tests
+        run: python -m unittest tests/winnowing-test.py
