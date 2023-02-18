@@ -1,9 +1,5 @@
 
 #vars
-IMAGE_NAME=scanoss-py
-REPO=scanoss
-DOCKER_FULLNAME=${REPO}/${IMAGE_NAME}
-GHCR_FULLNAME=ghcr.io/${REPO}/${IMAGE_NAME}
 VERSION=$(shell ./version.py)
 
 # HELP
@@ -18,7 +14,7 @@ help: ## This help
 
 clean: ## Clean all dev data
 	@echo "Removing dev and distribution data..."
-	@rm -rf dist/* build/* src/scanoss*.egg-info
+	@rm -rf dist/* build/* src/scanoss*.egg-info src/*.so
 
 dev_setup:  ## Setup Python dev env for the current user
 	@echo "Setting up dev env for the current user..."
@@ -26,7 +22,7 @@ dev_setup:  ## Setup Python dev env for the current user
 
 dev_uninstall:  ## Uninstall Python dev setup for the current user
 	@echo "Uninstalling dev env..."
-	pip3 uninstall -y scanoss
+	pip3 uninstall -y scanoss_winnowing
 	@rm -rf src/scanoss*.egg-info
 
 dist: clean dev_uninstall  ## Prepare Python package into a distribution
