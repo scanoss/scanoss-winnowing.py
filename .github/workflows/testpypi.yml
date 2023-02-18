@@ -8,19 +8,35 @@ permissions:
 
 jobs:
   build_wheels:
-    name: Build wheels on ubuntu
-    runs-on: macos-11
+    name: Build wheels on ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-20.04, windows-2019, macos-11]
+#    runs-on: macos-11
 
     steps:
       - uses: actions/checkout@v3
 
-      - name: Build wheels
-        uses: pypa/cibuildwheel@v2.11.4
-
-      - name: Publish Test Package
-        uses: pypa/gh-action-pypi-publish@release/v1
+      - name: Set up QEMU
+        if: runner.os == 'Linux'
+        uses: docker/setup-qemu-action@v2
         with:
-          path: ./wheelhouse/*.whl
-          user: __token__
-          password: ${{ secrets.TEST_PYPI_API_TOKEN }}
-          repository_url: https://test.pypi.org/legacy/
+          platforms: all
+
+      - name: Build wheels
+        uses: pypa/cibuildwheel@v2.12.0
+        env:
+          # configure cibuildwheel to build native archs ('auto'), and some emulated ones
+          CIBW_ARCHS_LINUX: auto aarch64 ppc64le s390x
+          CIBW_ARCHS_MACOS: x86_64 arm64
+
+      - name: List Packages
+        run: ls -la ./wheelhouse/
+
+#      - name: Publish Test Package
+#        uses: pypa/gh-action-pypi-publish@release/v1
+#        with:
+#          path: ./wheelhouse/*.whl
+#          user: __token__
+#          password: ${{ secrets.TEST_PYPI_API_TOKEN }}
+#          repository_url: https://test.pypi.org/legacy/
