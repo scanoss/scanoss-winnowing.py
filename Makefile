@@ -25,6 +25,10 @@ dev_uninstall:  ## Uninstall Python dev setup for the current user
 	pip3 uninstall -y scanoss_winnowing
 	@rm -rf src/scanoss*.egg-info
 
+src_dist: clean dev_uninstall  ## Build the source distribution
+	@echo "Build source package for distribution $(VERSION)..."
+	python3 -m build --sdist
+
 dist: clean dev_uninstall  ## Prepare Python package into a distribution
 	@echo "Build deployable package for distribution $(VERSION)..."
 	python3 -m build
