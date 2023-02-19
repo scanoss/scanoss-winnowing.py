@@ -27,16 +27,18 @@ jobs:
         uses: pypa/cibuildwheel@v2.12.0
         env:
 #          CIBW_ARCHS_LINUX: x86_64 aarch64
-          CIBW_ARCHS_LINUX: x86_64
+          CIBW_ARCHS_LINUX: aarch64
 
       - name: List Packages
         continue-on-error: true
         run: ls -la ./wheelhouse/
 
-#      - name: Publish Test Package
-#        uses: pypa/gh-action-pypi-publish@release/v1
-#        with:
-#          path: ./wheelhouse/*.whl
-#          user: __token__
-#          password: ${{ secrets.TEST_PYPI_API_TOKEN }}
-#          repository_url: https://test.pypi.org/legacy/
+      - name: Publish Test Package
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          skip_existing: true
+          packages_dir: wheelhouse
+          user: __token__
+          password: ${{ secrets.TEST_PYPI_API_TOKEN }}
+          repository_url: https://test.pypi.org/legacy/
+
