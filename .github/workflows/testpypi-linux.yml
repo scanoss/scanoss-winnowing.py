@@ -28,7 +28,7 @@ jobs:
         env:
 #          CIBW_ARCHS_LINUX: x86_64 aarch64
           CIBW_ARCHS_LINUX: x86_64
-          CIBW_BUILD: cp310-manylinux*
+          CIBW_BUILD: cp38-manylinux* cp39-manylinux* cp310-manylinux* cp311-manylinux*
 
       - name: List Packages
         continue-on-error: true
