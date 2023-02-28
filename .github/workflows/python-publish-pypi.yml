@@ -7,8 +7,8 @@ on:
     tags:
       - 'v*.*.*'
 
-permissions:
-  contents: read
+#permissions:
+#  contents: [read,write]
 
 jobs:
   # Run local unit tests before starting packaging

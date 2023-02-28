@@ -13,7 +13,7 @@ The **scanoss_winnowing** package can be used in Python projects/scripts. A good
 
 The `scanoss-py` package leverages this package. It can be installed using:
 ```bash
-pip3 install scanoss[scanoss_winnowing]
+pip3 install scanoss[fast_winnowing]
 ```
 
 ## Development
