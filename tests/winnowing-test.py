@@ -21,6 +21,7 @@
    OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
    THE SOFTWARE.
 """
+import os
 import unittest
 import time
 
@@ -51,6 +52,21 @@ class MyTestCase(unittest.TestCase):
         wfp = winnowing.wfp_for_contents(filename, False, contents)
 
         winnowing = Winnowing(debug=True, c_accelerated=False)
+        wfp_expected = winnowing.wfp_for_contents(filename, False, contents)
+        self.assertEqual(wfp, wfp_expected)
+
+    def test_winnowing_size_limit(self):
+        winnowing = Winnowing(debug=True, c_accelerated=True, post_size=2)
+        filename = "../src/scanoss_winnowing/winnowing.py"
+        if not os.path.exists(filename) or not os.path.isfile(filename):
+            filename = "src/scanoss_winnowing/winnowing.py"
+            if not os.path.exists(filename) or not os.path.isfile(filename):
+                self.fail(f'Test file does not exist: {filename}')
+        with open(filename, 'rb') as f:
+            contents = f.read()
+        wfp = winnowing.wfp_for_contents(filename, False, contents)
+
+        winnowing = Winnowing(debug=True, c_accelerated=False, post_size=2)
         wfp_expected = winnowing.wfp_for_contents(filename, False, contents)
         self.assertEqual(wfp, wfp_expected)
 

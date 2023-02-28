@@ -25,6 +25,10 @@ dev_uninstall:  ## Uninstall Python dev setup for the current user
 	pip3 uninstall -y scanoss_winnowing
 	@rm -rf src/scanoss*.egg-info
 
+unit_test:  ## Run unit tests
+	@echo "Running unit tests..."
+	python3 -m unittest tests/winnowing-test.py
+
 src_dist: clean dev_uninstall  ## Build the source distribution
 	@echo "Build source package for distribution $(VERSION)..."
 	python3 -m build --sdist
@@ -42,4 +46,4 @@ publish:  ## Publish Python package to PyPI
 	@echo "Publishing package to PyPI..."
 	twine upload dist/*
 
-package_all: dist publish  ## Build & Publish Python package to PyPI
+package_all: src_dist publish  ## Build & Publish Python Source package to PyPI

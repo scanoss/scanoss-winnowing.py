@@ -240,7 +240,15 @@ class Winnowing:
             import _winnowing
             self.print_trace(f'Using C code...')
             res = _winnowing.compute_wfd(contents, crc32c)
-            return wfp + str.lstrip(b''.join(res).decode('ascii')) + "\n"
+            wfp = wfp + str.lstrip(b''.join(res).decode('ascii'))
+            wfp_len = len(wfp.encode("utf-8"))
+            if self.size_limit and wfp_len > self.max_post_size:
+                self.print_debug(f'Warning: WFP too large. Reducing {file} from {wfp_len} to {self.max_post_size}')
+                # Take into account we might be splitting exactly at a newline '\n' so add one extra character
+                limit = self.max_post_size + 1 if wfp_len > (self.max_post_size+1) else self.max_post_size
+                wfp = wfp[0:limit]
+                wfp = wfp[0:wfp.rindex('\n', 0, limit)]
+            return wfp + "\n"
         self.print_trace(f'Using Python code...')
         # Initialize variables
         gram = bytearray()
@@ -280,9 +288,9 @@ class Winnowing:
                                     if self.size_limit and \
                                             (len(wfp.encode("utf-8")) +
                                              len(output.encode("utf-8"))) > self.max_post_size:
-                                        self.print_debug(f'Truncating WFP (64k limit) for: {file}')
+                                        self.print_debug(f'Truncating WFP ({self.max_post_size} limit) for: {file}')
                                         output = ''
-                                        break  # Stop collecting snippets as it's over 64k
+                                        break  # Stop collecting snippets as it's over post size limit
                                     wfp += output + '\n'
                                 output = "%d=%s" % (line, crc_hex)
                             else:

@@ -11,10 +11,10 @@ permissions:
   contents: read
 
 jobs:
+  # Run local unit tests before starting packaging
   local_test:
     name: Local Unit Test
     runs-on: ubuntu-latest
-
     steps:
       - uses: actions/checkout@v3
 
@@ -39,6 +39,7 @@ jobs:
       - name: Run Tests
         run: python -m unittest tests/winnowing-test.py
 
+  # Create a source distribution of the package
   package_source:
     if: success()
     needs: [ local_test ]
@@ -63,20 +64,13 @@ jobs:
       - name: List Source Package
         run: ls -la dist/
 
-#      - name: Publish Test Source Package
-#        uses: pypa/gh-action-pypi-publish@release/v1
-#        with:
-##          skip_existing: true
-#          user: __token__
-#          password: ${{ secrets.TEST_PYPI_API_TOKEN }}
-
       - name: Cache Source Package
         uses: actions/upload-artifact@v3
         with:
           name: scanoss-wheels
           path: ./dist/*tar.gz
 
-
+  # Build all the wheels for the specified OSes
   build_wheels:
     if: success()
     needs: [ local_test ]
@@ -84,9 +78,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-#        os: [ubuntu-20.04, macos-11, windows-2019]
-        os: [macos-11]
-
+        os: [ubuntu-20.04, macos-11, windows-2019]
     steps:
       - uses: actions/checkout@v3
 
@@ -114,6 +106,7 @@ jobs:
           name: scanoss-wheels
           path: ./wheelhouse/*.whl
 
+  # Upload all the wheels and source code to PyPI and create a GH Release
   upload_wheels:
     if: success()
     needs: [ build_wheels, package_source ]
@@ -133,23 +126,20 @@ jobs:
         run: |
           ls -la wheelhouse/
 
-#      - name: Publish Test Package
-#        uses: pypa/gh-action-pypi-publish@release/v1
-#        with:
-##          skip_existing: true
-#          packages_dir: wheelhouse
-#          user: __token__
-#          password: ${{ secrets.PYPI_API_TOKEN }}
+      - name: Publish Test Package
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+#          skip_existing: true
+          packages_dir: wheelhouse
+          user: __token__
+          password: ${{ secrets.PYPI_API_TOKEN }}
 
-#      - name: Release
-#        if: ${{ github.ref_type == 'tag' }} && ${{ github.ref_name != '' }}
-#        uses: softprops/action-gh-release@v1
-#        with:
-#          draft: true
-#          files: |
-#            wheelhouse/*.whl
-#            wheelhouse/*.tar.gz
-
+      # Only create a release if we have a tagged push
       - name: Release ${{ github.ref_type }} - ${{ github.ref_name }}
         if: github.ref_type == 'tag' && startsWith(github.ref_name, 'v')
-        run: echo "Running Release step..."
+        uses: softprops/action-gh-release@v1
+        with:
+          draft: true
+          files: |
+            wheelhouse/*.whl
+            wheelhouse/*.tar.gz
