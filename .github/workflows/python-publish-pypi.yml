@@ -70,11 +70,11 @@ jobs:
 #          user: __token__
 #          password: ${{ secrets.TEST_PYPI_API_TOKEN }}
 
-#      - name: Cache Source Package
-#      - uses: actions/upload-artifact@v3
-#        with:
-#          name: scanoss-wheels
-#          path: ./dist/*tar.gz
+      - name: Cache Source Package
+        uses: actions/upload-artifact@v3
+        with:
+          name: scanoss-wheels
+          path: ./dist/*tar.gz
 
 
   build_wheels:
@@ -108,7 +108,7 @@ jobs:
         run: ls ./wheelhouse/
 
       - name: Cache ${{ matrix.os }} Wheels
-      - uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v3
         with:
           name: scanoss-wheels
           path: ./wheelhouse/*.whl
@@ -122,7 +122,7 @@ jobs:
       - uses: actions/checkout@v3
 
       - name: Download Cached artifacts
-      - uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v3
         with:
           name: scanoss-wheels
           path: |
@@ -152,6 +152,6 @@ jobs:
 #            wheelhouse/*.whl
 #            dist/*.tar.gz
 
-#      - name: Release ${{ github.ref_type }} - ${{ github.ref_name }}
-#        if: ${{ github.ref_type == 'tag' }} && ${{ github.ref_name != '' }} && startsWith(github.ref_name, 'v')
-#        run: echo "Running Release step..."
+      - name: Release ${{ github.ref_type }} - ${{ github.ref_name }}
+        if: ${{ github.ref_type == 'tag' }} && ${{ github.ref_name != '' }} && startsWith(github.ref_name, 'v')
+        run: echo "Running Release step..."
