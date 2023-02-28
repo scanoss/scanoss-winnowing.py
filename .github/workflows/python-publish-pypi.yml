@@ -60,12 +60,22 @@ jobs:
       - name: Build Source Package
         run: make src_dist
 
+      - name: List Source Package
+        run: ls -la dist/
+
 #      - name: Publish Test Source Package
 #        uses: pypa/gh-action-pypi-publish@release/v1
 #        with:
 ##          skip_existing: true
 #          user: __token__
 #          password: ${{ secrets.TEST_PYPI_API_TOKEN }}
+
+      - name: Cache Source Package
+      - uses: actions/upload-artifact@v3
+        with:
+          name: scanoss-wheels
+          path: ./dist/*tar.gz
+
 
   build_wheels:
     if: success()
@@ -97,6 +107,7 @@ jobs:
         continue-on-error: true
         run: ls ./wheelhouse/
 
+      - name: Cache ${{ matrix.os }} Wheels
       - uses: actions/upload-artifact@v3
         with:
           name: scanoss-wheels
@@ -104,7 +115,7 @@ jobs:
 
   upload_wheels:
     if: success()
-    needs: [ build_wheels ]
+    needs: [ build_wheels, package_source ]
     name: Upload Wheels
     runs-on: [ubuntu-latest]
     steps:
@@ -112,11 +123,15 @@ jobs:
       - uses: actions/download-artifact@v3
         with:
           name: scanoss-wheels
-          path: wheelhouse
+          path: |
+            wheelhouse
+            dist
 
       - name: List Packages
         continue-on-error: true
-        run: ls -la wheelhouse/
+        run: |
+          ls -la wheelhouse/
+          ls -la dist/
 
 #      - name: Publish Test Package
 #        uses: pypa/gh-action-pypi-publish@release/v1
@@ -125,3 +140,16 @@ jobs:
 #          packages_dir: wheelhouse
 #          user: __token__
 #          password: ${{ secrets.PYPI_API_TOKEN }}
+
+#      - name: Release
+#        if: ${{ github.ref_type == 'tag' }} && ${{ github.ref_name != '' }}
+#        uses: softprops/action-gh-release@v1
+#        with:
+#          draft: true
+#          files: |
+#            wheelhouse/*.whl
+#            dist/*.tar.gz
+
+      - name: Release ${{ github.ref_type }} - ${{ github.ref_name }}
+        if: ${{ github.ref_type == 'tag' }} && ${{ github.ref_name != '' }} && startsWith(github.ref_name, 'v')
+        run: echo "Running Release step..."
