@@ -70,11 +70,11 @@ jobs:
 #          user: __token__
 #          password: ${{ secrets.TEST_PYPI_API_TOKEN }}
 
-      - name: Cache Source Package
-      - uses: actions/upload-artifact@v3
-        with:
-          name: scanoss-wheels
-          path: ./dist/*tar.gz
+#      - name: Cache Source Package
+#      - uses: actions/upload-artifact@v3
+#        with:
+#          name: scanoss-wheels
+#          path: ./dist/*tar.gz
 
 
   build_wheels:
