@@ -84,7 +84,8 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-20.04, macos-11, windows-2019]
+#        os: [ubuntu-20.04, macos-11, windows-2019]
+        os: [macos-11]
 
     steps:
       - uses: actions/checkout@v3
@@ -125,15 +126,12 @@ jobs:
         uses: actions/download-artifact@v3
         with:
           name: scanoss-wheels
-          path: |
-            wheelhouse
-            dist
+          path: wheelhouse
 
       - name: List Packages
         continue-on-error: true
         run: |
           ls -la wheelhouse/
-          ls -la dist/
 
 #      - name: Publish Test Package
 #        uses: pypa/gh-action-pypi-publish@release/v1
@@ -150,8 +148,8 @@ jobs:
 #          draft: true
 #          files: |
 #            wheelhouse/*.whl
-#            dist/*.tar.gz
+#            wheelhouse/*.tar.gz
 
       - name: Release ${{ github.ref_type }} - ${{ github.ref_name }}
-        if: ${{ github.ref_type == 'tag' }} && ${{ github.ref_name != '' }} && startsWith(github.ref_name, 'v')
+        if: github.ref_type == 'tag' && startsWith(github.ref_name, 'v')
         run: echo "Running Release step..."
