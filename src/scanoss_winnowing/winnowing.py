@@ -109,10 +109,15 @@ class Winnowing:
                  ):
         """
         Instantiate Winnowing class
-        Parameters
-        ----------
-            size_limit: bool
-                Limit the size of a fingerprint to 64k (post size) - Default True
+        :param size_limit: Limit the size of a fingerprint to 64k (post size) - default True
+        :param debug: Enable debug - default False
+        :param trace: Enable trace - default False
+        :param quiet: Force quiet mode - default False
+        :param skip_snippets: Skip snippets - default False
+        :param post_size: Limit the size of a WFP per file - default 64k
+        :param all_extensions: Process all extensions - default False
+        :param obfuscate: Obfuscate the filenames - default False
+        :param c_accelerated: Use C implementation - default True
         """
         self.debug = debug
         self.trace = trace
@@ -130,10 +135,8 @@ class Winnowing:
     def _normalize(byte):
         """
         Normalise a given byte as an ASCII character
-        Parameters
-        ----------
-        byte : int
-          The byte to normalise
+        :param byte: The byte to normalise
+        :return: integer
         """
         if byte < ASCII_0:
             return 0
@@ -150,14 +153,10 @@ class Winnowing:
     def __skip_snippets(self, file: str, src: str) -> bool:
         """
         Determine files that are not of interest based on their content or file extension
-        Parameters
-        ----------
-            src: str
-                string to compare
-        Return
-        ------
-            True: if file should be skipped
-            False: otherwise
+
+        :param file: filename
+        :param src: String to compare (file contents)
+        :return: True if file should be skipped, False otherwise
         """
         if self.all_extensions:
             return False
@@ -184,12 +183,10 @@ class Winnowing:
     def wfp_for_file(self, path: str, file: str) -> str:
         """
         Returns the WFP for a file by executing the winnowing algorithm over its contents.
-        Parameters
-        ----------
-            path : str
-                The full path of the file.
-            file: str
-                File name/path to record in WFP
+
+        :param path: full path of the file
+        :param file: name/path to record in the WFP
+        :return: WFP
         """
         binary_file = self.is_binary(path)
         with open(path, 'rb') as f:
@@ -213,14 +210,11 @@ class Winnowing:
     def wfp_for_contents(self, file: str, bin_file: bool, contents: bytes) -> str:
         """
         Generate a Winnowing fingerprint (WFP) for the given file contents
-        Parameters
-        ----------
-            :param file: file to fingerprint
-            :param bin_file: binary file or not
-            :param contents: file contents
-        Return
-        ------
-            WFP string
+
+        :param file: filename to fingerprint
+        :param bin_file:  is it a binary file or not
+        :param contents:  file contents
+        :return: WFP
         """
         file_md5 = hashlib.md5(contents).hexdigest()
         # Print file line
@@ -236,6 +230,7 @@ class Winnowing:
         if bin_file or self.skip_snippets or\
                 (not self.all_extensions and self.__skip_snippets(file, contents.decode('utf-8', 'ignore'))):
             return wfp
+        # Run the C implementation of the winnowing algorithm
         if self.c_accelerated:
             import _winnowing
             self.print_trace(f'Using C code...')

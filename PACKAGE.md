@@ -34,4 +34,4 @@ Python 3.7 or higher.
 The source for this package can be found [here](https://github.com/scanoss/scanoss-winnowing.py).
 
 ## Changelog
-Details of each release can be found [here](https://github.com/scanoss/scanoss-winnowing/blob/main/CHANGELOG.md).
+Details of each release can be found [here](https://github.com/scanoss/scanoss-winnowing.py/blob/main/CHANGELOG.md).

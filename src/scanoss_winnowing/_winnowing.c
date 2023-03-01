@@ -24,8 +24,7 @@
    Winnowing Algorithm implementation for SCANOSS.
 
    This module implements an adaptation of the original winnowing algorithm by
- S. Schleimer, D. S. Wilkerson and A. Aiken as described in their seminal
- article which can be found here:
+   S. Schleimer, D. S. Wilkerson and A. Aiken as described in their seminal article which can be found here:
    https://theory.stanford.edu/~aiken/publications/papers/sigmod03.pdf
 */
 
@@ -37,6 +36,7 @@
 #define WINDOW 64
 
 char norm_table[256];
+
 /* normalize is also part of the winnowing configuration */
 char normalize(char byte)
 {
@@ -51,8 +51,7 @@ char normalize(char byte)
     return 0;
 }
 
-uint32_t
-array_min(uint32_t* array, int sz)
+uint32_t array_min(uint32_t* array, int sz)
 {
     int i;
     uint32_t res = UINT_MAX;
@@ -63,8 +62,8 @@ array_min(uint32_t* array, int sz)
     }
     return res;
 }
-uint32_t
-call_crc32(char* data, int size, PyObject* crc32c)
+
+uint32_t call_crc32(char* data, int size, PyObject* crc32c)
 {
     PyObject* bytes = PyBytes_FromStringAndSize(data, size);
     PyObject* arglist = Py_BuildValue("(O)", bytes);
@@ -76,8 +75,7 @@ call_crc32(char* data, int size, PyObject* crc32c)
 }
 
 /* a fast version which uses a pre-built tuple, with a memory view */
-uint32_t
-call_crc32_f(PyObject* arglist, PyObject* crc32c)
+uint32_t call_crc32_f(PyObject* arglist, PyObject* crc32c)
 {
     PyObject* result = PyObject_CallObject(crc32c, arglist);
     uint32_t ret = PyLong_AsUnsignedLong(result);
@@ -85,8 +83,7 @@ call_crc32_f(PyObject* arglist, PyObject* crc32c)
     return ret;
 }
 
-static PyObject*
-winnowing_compute_wfd(PyObject* self, PyObject* args)
+static PyObject* winnowing_compute_wfd(PyObject* self, PyObject* args)
 {
     Py_buffer in;
     const char* content;
@@ -129,14 +126,11 @@ winnowing_compute_wfd(PyObject* self, PyObject* args)
             if (window_idx == WINDOW - 1) {
                 uint32_t min_hash = array_min(window, WINDOW);
                 if (min_hash != last_hash) {
-                    //Hashing the hash will result in a better balanced resulting data set
-                    //as it will counter the winnowing effect which selects the "minimum"
-                    //hash in each window
+                    /* Hashing the hash will result in a better balanced resulting data set
+                       as it will counter the winnowing effect which selects the "minimum" hash in each window */
                     uint32_t crc = call_crc32((char*)&min_hash, 4, crc32c);
                     char crc_s[9];
-                    /* python format will not correctly manage the leading 0, so we preformat
-                       with snprintf
-                    */
+                    /* python format will not correctly manage the leading 0, so we preformat with snprintf */
                     snprintf(crc_s, 9, "%08x", crc);
                     if (last_line != line) {
                         if (line == 1)
@@ -172,13 +166,11 @@ static struct PyModuleDef winnowingmodule = {
     PyModuleDef_HEAD_INIT,
     "_winnowing", /* name of module */
     NULL, /* module documentation, may be NULL */
-    -1, /* size of per-interpreter state of the module,
-                   or -1 if the module keeps state in global variables. */
+    -1, /* size of per-interpreter state of the module, or -1 if the module keeps state in global variables. */
     winnowingMethods
 };
 
-PyObject*
-PyInit__winnowing(void)
+PyObject* PyInit__winnowing(void)
 {
     int i;
     for (i = 0; i < 256; i++) {

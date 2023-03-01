@@ -10,8 +10,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Upcoming changes...
 
 
-## [0.1.0] - 2023-02-28
+## [0.1.0] - 2023-01-01
 ### Added
 - Added initial C implementation of winnowing algorithm
 
-[0.1.0]: https://github.com/scanoss/scanoss.py/compare/v0.0.1...v0.1.0
+[0.1.0]: https://github.com/scanoss/scanoss-winnowing.py/compare/v0.0.1...v0.1.0
