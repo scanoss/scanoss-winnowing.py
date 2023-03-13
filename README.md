@@ -2,6 +2,9 @@
 The SCANOSS Winnowing python package provides fast implementation of the winnowing algorithm.
 This is achieved using a C code implementation to generate the snippet IDs.
 
+[![Local Build/Test](https://github.com/scanoss/scanoss-winnowing.py/actions/workflows/python-local-test.yml/badge.svg)](https://github.com/scanoss/scanoss-winnowing.py/actions/workflows/python-local-test.yml)
+[![Publish Python Package - PyPI](https://github.com/scanoss/scanoss-winnowing.py/actions/workflows/python-publish-pypi.yml/badge.svg)](https://github.com/scanoss/scanoss-winnowing.py/actions/workflows/python-publish-pypi.yml)
+
 ## Installation
 To install (from [pypi.org](https://pypi.org/project/scanoss_winnowing)), please run:
 ```bash
