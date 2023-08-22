@@ -56,7 +56,7 @@ class MyTestCase(unittest.TestCase):
         self.assertEqual(wfp, wfp_expected)
 
     def test_winnowing_size_limit(self):
-        winnowing = Winnowing(debug=True, c_accelerated=True, post_size=2)
+        winnowing = Winnowing(debug=True, c_accelerated=True, post_size=2, size_limit=True)
         filename = "../src/scanoss_winnowing/winnowing.py"
         if not os.path.exists(filename) or not os.path.isfile(filename):
             filename = "src/scanoss_winnowing/winnowing.py"
@@ -66,7 +66,7 @@ class MyTestCase(unittest.TestCase):
             contents = f.read()
         wfp = winnowing.wfp_for_contents(filename, False, contents)
 
-        winnowing = Winnowing(debug=True, c_accelerated=False, post_size=2)
+        winnowing = Winnowing(debug=True, c_accelerated=False, post_size=2, size_limit=True)
         wfp_expected = winnowing.wfp_for_contents(filename, False, contents)
         self.assertEqual(wfp, wfp_expected)
 
@@ -76,12 +76,14 @@ class MyTestCase(unittest.TestCase):
         with open(__file__, 'rb') as f:
             contents = f.read()
         t1 = time.time()
+        wfp = ""
         for i in range(1000):
             wfp = winnowing.wfp_for_contents(filename, False, contents)
         t2 = time.time()
         x1 = t2 - t1
         winnowing = Winnowing(debug=True, c_accelerated=False)
         t1 = time.time()
+        wfp_expected = ""
         for i in range(100):
             wfp_expected = winnowing.wfp_for_contents(filename, False, contents)
         t2 = time.time()
