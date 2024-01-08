@@ -241,12 +241,19 @@ class Winnowing:
             return wfp
         # Add HPSM
         if self.hpsm:
-            hpsm = self.calc_hpsm(contents)
-            wfp += 'hpsm={0}\n'.format(hpsm)
+        # Run the C implementation of the HPSM algorithm
+            if self.c_accelerated:
+                import _hpsm
+                self.print_trace(f'Using HPSM C code...')
+                hpsm = _hpsm.compute_hpsm(contents, "")
+                wfp += 'hpsm=' + str.lstrip(b''.join(hpsm).decode('ascii')) + '\n'
+            else:
+                hpsm = self.calc_hpsm(contents)
+                wfp += 'hpsm={0}\n'.format(hpsm)
         # Run the C implementation of the winnowing algorithm
         if self.c_accelerated:
             import _winnowing
-            self.print_trace(f'Using C code...')
+            self.print_trace(f'Using winnowing C code...')
             res = _winnowing.compute_wfd(contents, crc32c)
             wfp = wfp + str.lstrip(b''.join(res).decode('ascii'))
             wfp_len = len(wfp.encode("utf-8"))
