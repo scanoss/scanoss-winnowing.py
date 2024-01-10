@@ -79,9 +79,10 @@ static uint8_t *get_content_hashes(const char *src, size_t *len) {
         }
         else
         {
-            char *cpy = strndup(line,lineLen);
+            char cpy[lineLen+1];
+            strncpy(cpy, line, lineLen);
+            cpy[lineLen] = 0;
             char *normalizedLine = normalize(cpy);
-            free(cpy);
             checksum = get_line_crc8(normalizedLine);
             free(normalizedLine);
         }
