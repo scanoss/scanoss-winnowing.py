@@ -110,10 +110,6 @@ static PyObject* winnowing_compute_hpsm(PyObject* self, PyObject* args) {
     {
         char crc_s[3];
         snprintf(crc_s, 3, "%02x", hashes[i]);
-       // free(&hashes[i]);
-       FILE * f = fopen("/data/mariano/ptest.log", "a");
-       fprintf(f, "%s", crc_s);
-       fclose(f);
         PyObject* out_buf = PyBytes_FromFormat("%s", crc_s);
         PyList_Append(result, out_buf);
     }
