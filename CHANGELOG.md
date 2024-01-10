@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - Upcoming changes...
 
+## [0.4.0] - 2024-01-10
+### Added
+- Added C implementation of HPSM algorithm
+
 ## [0.3.0] - 2023-08-22
 ### Added
 - Changed default post size limit to 32k
