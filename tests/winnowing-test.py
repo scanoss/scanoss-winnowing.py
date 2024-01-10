@@ -112,6 +112,17 @@ class MyTestCase(unittest.TestCase):
               b'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00' \
               b'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00'
         self.assertEqual(res, exp)
+    
+    def test_hpsm_c(self):
+        winnowing = Winnowing(debug=True, hpsm=True, c_accelerated=True)
+        filename = "test-file.py"
+        with open(__file__, 'rb') as f:
+            contents = f.read()
+        wfp = winnowing.wfp_for_contents(filename, False, contents)
+
+        winnowing = Winnowing(debug=True, hpsm=True, c_accelerated=False)
+        wfp_expected = winnowing.wfp_for_contents(filename, False, contents)
+        self.assertEqual(wfp, wfp_expected)
 
 
 if __name__ == '__main__':
