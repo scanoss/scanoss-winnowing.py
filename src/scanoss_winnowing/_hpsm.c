@@ -5,6 +5,7 @@
 #define PY_SSIZE_T_CLEAN
 #include <Python.h>
 
+#define MAX_LONG_LINE_CHARS 1000
 uint8_t crc8_update(uint8_t crc, uint8_t data) {
 	uint8_t i;
 
@@ -79,7 +80,7 @@ static uint8_t *get_content_hashes(const char *src, size_t *len) {
         }
         else
         {
-            char cpy[lineLen+1];
+            char cpy[MAX_LONG_LINE_CHARS] = "\0";
             strncpy(cpy, line, lineLen);
             cpy[lineLen] = 0;
             char *normalizedLine = normalize(cpy);
