@@ -30,7 +30,6 @@
 
 #define PY_SSIZE_T_CLEAN
 #include <Python.h>
-
 /* Winnowing configuration. DO NOT CHANGE. */
 #define GRAM 30
 #define WINDOW 64
