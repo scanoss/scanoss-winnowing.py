@@ -81,7 +81,7 @@ static uint8_t *get_content_hashes(const char *src, size_t *len) {
         else
         {
             char cpy[MAX_LONG_LINE_CHARS] = "\0";
-            strncpy(cpy, line, lineLen);
+            strncpy(cpy, line, lineLen >= MAX_LONG_LINE_CHARS ? MAX_LONG_LINE_CHARS : lineLen);
             cpy[lineLen] = 0;
             char *normalizedLine = normalize(cpy);
             checksum = get_line_crc8(normalizedLine);
