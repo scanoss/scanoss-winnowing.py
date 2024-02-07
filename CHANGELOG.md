@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - Upcoming changes...
 
+## [0.4.1] - 2024-01-10
+### Added
+- Solve stability bug on HPSM.
+
 ## [0.4.0] - 2024-01-10
 ### Added
 - Added C implementation of HPSM algorithm
@@ -31,3 +35,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 [0.2.0]: https://github.com/scanoss/scanoss-winnowing.py/compare/v0.1.1...v0.2.0
 [0.3.0]: https://github.com/scanoss/scanoss-winnowing.py/compare/v0.2.0...v0.3.0
 [0.4.0]: https://github.com/scanoss/scanoss-winnowing.py/compare/v0.3.0...v0.4.0
+[0.4.1]: https://github.com/scanoss/scanoss-winnowing.py/compare/v0.4.0...v0.4.1
+

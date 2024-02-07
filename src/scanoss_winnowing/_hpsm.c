@@ -1,3 +1,29 @@
+/*
+ SPDX-License-Identifier: MIT
+
+   Copyright (c) 2023, SCANOSS
+
+   Permission is hereby granted, free of charge, to any person obtaining a copy
+   of this software and associated documentation files (the "Software"), to deal
+   in the Software without restriction, including without limitation the rights
+   to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+   copies of the Software, and to permit persons to whom the Software is
+   furnished to do so, subject to the following conditions:
+
+   The above copyright notice and this permission notice shall be included in
+   all copies or substantial portions of the Software.
+
+   THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+   IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+   FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+   AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+   LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+   OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+   THE SOFTWARE.
+
+   HPSM Algorithm implementation for SCANOSS.
+*/
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -102,18 +128,30 @@ static PyObject* winnowing_compute_hpsm(PyObject* self, PyObject* args) {
     Py_buffer in;
     PyObject* result = PyList_New(0);
     
-    if (!PyArg_ParseTuple(args, "y*O", &in))
+    if (!PyArg_ParseTuple(args, "y*", &in))
         return NULL;
     const char* content = in.buf;
     size_t size = 0;
     uint8_t *hashes = get_content_hashes(content, &size);
+    if (!hashes)
+        return NULL;
+
     for (int i = 0; i < size; i++)
     {
         char crc_s[3];
         snprintf(crc_s, 3, "%02x", hashes[i]);
-        PyObject* out_buf = PyBytes_FromFormat("%s", crc_s);
-        PyList_Append(result, out_buf);
+        PyObject* out_buf = PyByteArray_FromStringAndSize(crc_s, 2); //avoid the null char at the end
+        if (PyList_Append(result, out_buf) == -1) {
+            free(hashes);
+            Py_DECREF(out_buf);
+            Py_DECREF(result);
+            PyBuffer_Release(&in);
+            return NULL;
+        }
+        Py_DECREF(out_buf);
     }
+    free(hashes);
+    PyBuffer_Release(&in);
     return result;
 }
 
