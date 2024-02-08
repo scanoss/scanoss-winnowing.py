@@ -245,7 +245,7 @@ class Winnowing:
             if self.c_accelerated:
                 import _hpsm
                 self.print_trace(f'Using HPSM C code...')
-                hpsm = _hpsm.compute_hpsm(contents, "")
+                hpsm = _hpsm.compute_hpsm(contents)
                 wfp += 'hpsm=' + str.lstrip(b''.join(hpsm).decode('ascii')) + '\n'
             else:
                 hpsm = self.calc_hpsm(contents)
