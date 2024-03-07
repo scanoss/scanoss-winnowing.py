@@ -37,11 +37,9 @@ class MyTestCase(unittest.TestCase):
         contents = "c code contents"
         content_types = bytes(contents, encoding="raw_unicode_escape")
         wfp = winnowing.wfp_for_contents(filename, False, content_types)
-        print(f'WFP for {filename}: {wfp}')
         self.assertIsNotNone(wfp)
         filename = __file__
         wfp = winnowing.wfp_for_file(filename, filename)
-        print(f'WFP for {filename}: {wfp}')
         self.assertIsNotNone(wfp)
 
     def test_winnowing_c(self):
@@ -97,7 +95,6 @@ class MyTestCase(unittest.TestCase):
         contents = "jar file contents"
         content_types = bytes(contents, encoding="raw_unicode_escape")
         wfp = winnowing.wfp_for_contents(filename, False, content_types)
-        print(f'WFP for {filename}: {wfp}')
         self.assertIsNotNone(wfp)
 
     def test_normalize(self):
@@ -123,6 +120,36 @@ class MyTestCase(unittest.TestCase):
         winnowing = Winnowing(debug=True, hpsm=True, c_accelerated=False)
         wfp_expected = winnowing.wfp_for_contents(filename, False, contents)
         self.assertEqual(wfp, wfp_expected)
+     
+    def test_snippet_strip(self):
+        winnowing = Winnowing(debug=True, hpsm=True, c_accelerated=False,
+                              strip_snippet_ids=['d5e54c33,b03faabe'], 
+                              strip_hpsm_ids=['f7cffc62d1801413bff9bacfff'])
+        filename = "test-file.py"
+        with open(__file__, 'rb') as f:
+            contents = f.read()
+        print('--- Test snippet and HPSM strip ---')
+        wfp = winnowing.wfp_for_contents(filename, False, contents)
+        found = 0
+        print(f'WFP for {filename}: {wfp}')
+        try:
+            found = wfp.index('d5e54c33,b03faabe')
+        except ValueError:
+            found = -1
+        self.assertEqual(found, -1)       
+        
+        try:
+            found = wfp.index('f7cffc62d1801413bff9bacfff')
+        except ValueError:
+            found = -1
+        self.assertEqual(found, -1)
+        
+        print('--- Test accelerated mode ---')
+        winnowing = Winnowing(debug=True, hpsm=True, c_accelerated=True, 
+                              strip_snippet_ids= ['d5e54c33,b03faabe'], 
+                              strip_hpsm_ids= ['f7cffc62d1801413bff9bacfff'])
+        wfp_acc = winnowing.wfp_for_contents(filename, False, contents)
+        self.assertEqual(wfp, wfp_acc)
 
 
 if __name__ == '__main__':
