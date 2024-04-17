@@ -8,6 +8,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 ### Added
 - Upcoming changes...
+
+## [0.5.1] - 2024-04-17
+### Added
+- Added tagging workflow to aid release generation
+
 ## [0.5.0] - 2024-03-08
 ### Added
 - Add filtering options: wfp and hpsm strip plus md5 skip.
@@ -40,5 +45,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 [0.4.0]: https://github.com/scanoss/scanoss-winnowing.py/compare/v0.3.0...v0.4.0
 [0.4.1]: https://github.com/scanoss/scanoss-winnowing.py/compare/v0.4.0...v0.4.1
 [0.5.0]: https://github.com/scanoss/scanoss-winnowing.py/compare/v0.4.1...v0.5.0
+[0.5.1]: https://github.com/scanoss/scanoss-winnowing.py/compare/v0.5.0...v0.5.1
 
 
