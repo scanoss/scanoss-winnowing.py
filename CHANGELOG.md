@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - Upcoming changes...
 
+## [0.5.2] - 2024-08-09
+### Added
+- Added support for UTF-16 filenames
+
 ## [0.5.1] - 2024-04-17
 ### Added
 - Added tagging workflow to aid release generation
@@ -46,5 +50,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 [0.4.1]: https://github.com/scanoss/scanoss-winnowing.py/compare/v0.4.0...v0.4.1
 [0.5.0]: https://github.com/scanoss/scanoss-winnowing.py/compare/v0.4.1...v0.5.0
 [0.5.1]: https://github.com/scanoss/scanoss-winnowing.py/compare/v0.5.0...v0.5.1
-
+[0.5.2]: https://github.com/scanoss/scanoss-winnowing.py/compare/v0.5.1...v0.5.2
 

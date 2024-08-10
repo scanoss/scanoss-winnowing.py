@@ -298,7 +298,7 @@ class Winnowing:
             return ''
         # Print file line
         content_length = len(contents)
-        wfp_filename = file
+        wfp_filename = repr(file).strip("'")
         if self.obfuscate:  # hide the real size of the file and its name, but keep the suffix
             wfp_filename = f'{self.ob_count}{pathlib.Path(file).suffix}'
             self.ob_count = self.ob_count + 1
