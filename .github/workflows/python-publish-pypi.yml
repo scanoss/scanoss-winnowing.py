@@ -16,10 +16,10 @@ jobs:
     name: Local Unit Test
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Set up Python
-        uses: actions/setup-python@v3
+        uses: actions/setup-python@v5
         with:
           python-version: '3.10.x'
 
@@ -46,10 +46,10 @@ jobs:
     name: Publish Source Package
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Set up Python
-        uses: actions/setup-python@v3
+        uses: actions/setup-python@v5
         with:
           python-version: '3.10.x'
 
@@ -84,12 +84,12 @@ jobs:
 
       - name: Set up QEMU
         if: runner.os == 'Linux'
-        uses: docker/setup-qemu-action@v2
+        uses: docker/setup-qemu-action@v3
         with:
           platforms: all
 
       - name: Build wheels
-        uses: pypa/cibuildwheel@v2.16.5
+        uses: pypa/cibuildwheel@v2.20.0
         env:
           CIBW_ARCHS_WINDOWS: AMD64 ARM64
           CIBW_ARCHS_MACOS: x86_64 arm64
@@ -115,7 +115,7 @@ jobs:
     name: Upload Wheels
     runs-on: [ubuntu-latest]
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Download Cached artifacts
         uses: actions/download-artifact@v3
