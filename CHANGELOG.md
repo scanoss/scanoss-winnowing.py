@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - Upcoming changes...
 
+## [0.5.4] - 2025-05-23
+### Modified
+- Update to align with scanoss.py winnowing.py implementation
+
 ## [0.5.3] - 2024-08-14
 ### Fixed
 - Updated and fixed GH Actions dependencies
