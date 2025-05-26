@@ -29,6 +29,7 @@
 """
 import hashlib
 import pathlib
+import platform
 import sys
 import re
 
@@ -57,7 +58,7 @@ SKIP_SNIPPET_EXT = {  # File extensions to ignore snippets for
     ".o", ".a", ".so", ".obj", ".dll", ".lib", ".out", ".app", ".bin",
     ".lst", ".dat", ".json", ".htm", ".html", ".xml", ".md", ".txt",
     ".doc", ".docx", ".xls", ".xlsx", ".ppt", ".pptx", ".odt", ".ods", ".odp", ".pages", ".key", ".numbers",
-    ".pdf", ".min.js", ".mf", ".sum", ".woff", ".woff2", ".xsd", ".pom"
+    ".pdf", ".min.js", ".mf", ".sum", ".woff", ".woff2", ".xsd", ".pom", ".whl"
 }
 
 CRC8_MAXIM_DOW_TABLE_SIZE = 0x100
@@ -252,7 +253,7 @@ class Winnowing:
                     hpsm_id_len = hpsm_id_len + 1
 
                 to_remove = hpsm[hpsm_id_index:hpsm_id_index + hpsm_id_len]
-                self.print_debug(f'HPSM ID to replace {to_remove}')
+                self.print_debug(f'HPSM ID {to_remove} to replace')
                 # Calculate the XOR of each byte to produce the correct ignore sequence.
                 replacement = ''.join(
                     [format(int(to_remove[i:i + 2], 16) ^ 0xFF, '02x') for i in range(0, len(to_remove), 2)])
@@ -298,11 +299,15 @@ class Winnowing:
             return ''
         # Print file line
         content_length = len(contents)
-        wfp_filename = repr(file).strip("'")
+        original_filename = file
+
+        if platform.system() == 'Windows':
+            original_filename = file.replace('\\', '/')
+        wfp_filename = repr(original_filename).strip("'")  # return a utf-8 compatible version of the filename
         if self.obfuscate:  # hide the real size of the file and its name, but keep the suffix
-            wfp_filename = f'{self.ob_count}{pathlib.Path(file).suffix}'
+            wfp_filename = f'{self.ob_count}{pathlib.Path(original_filename).suffix}'
             self.ob_count = self.ob_count + 1
-            self.file_map[wfp_filename] = file  # Save the file name map for later (reverse lookup)
+            self.file_map[wfp_filename] = original_filename  # Save the file name map for later (reverse lookup)
 
         wfp = 'file={0},{1},{2}\n'.format(file_md5, content_length, wfp_filename)
         # We don't process snippets for binaries, or other uninteresting files, or if we're requested to skip
