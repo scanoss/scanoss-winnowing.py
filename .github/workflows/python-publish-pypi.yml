@@ -67,7 +67,7 @@ jobs:
       - name: Cache Source Package
         uses: actions/upload-artifact@v4
         with:
-          name: scanoss-wheels
+          name: scanoss-wheels-src
           path: ./dist/*tar.gz
 
   # Build all the wheels for the specified OSes
@@ -105,7 +105,7 @@ jobs:
       - name: Cache ${{ matrix.os }} Wheels
         uses: actions/upload-artifact@v4
         with:
-          name: scanoss-wheels
+          name: scanoss-wheels-${{ matrix.os }}
           path: ./wheelhouse/*.whl
 
   # Upload all the wheels and source code to PyPI and create a GH Release
@@ -120,7 +120,8 @@ jobs:
       - name: Download Cached artifacts
         uses: actions/download-artifact@v4
         with:
-          name: scanoss-wheels
+          pattern: scanoss-wheels-*
+          merge-multiple: true
           path: wheelhouse
 
       - name: List Packages
