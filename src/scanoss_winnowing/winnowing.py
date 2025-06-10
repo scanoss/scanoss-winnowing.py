@@ -32,6 +32,7 @@ import pathlib
 import platform
 import sys
 import re
+from typing import Tuple
 
 from crc32c import crc32c
 from binaryornot.check import is_binary
@@ -148,6 +149,7 @@ class Winnowing:
         self.strip_hpsm_ids = strip_hpsm_ids
         self.strip_snippet_ids = strip_snippet_ids
         self.hpsm = hpsm
+        self.is_windows = platform.system() == 'Windows'
         if hpsm:
             self.crc8_maxim_dow_table = []
             self.crc8_generate_table()
@@ -199,6 +201,49 @@ class Winnowing:
             self.print_trace(f'Skipping snippets as the file appears to be xml/html/binary: {file}')
             return True  # Ignore xml & html & ac3d
         return False
+    
+    def __detect_line_endings(self, contents: bytes) -> Tuple[bool, bool, bool]:
+        """Detect the types of line endings present in file contents.
+        Args:
+            contents: File contents as bytes.
+        Returns:
+            Tuple of (has_crlf, has_lf_only, has_cr_only, has_mixed) indicating which line ending types are present.
+        """
+        has_crlf = b'\r\n' in contents
+        # For LF detection, we need to find LF that's not part of CRLF
+        content_without_crlf = contents.replace(b'\r\n', b'')
+        has_standalone_lf = b'\n' in content_without_crlf
+        # For CR detection, we need to find CR that's not part of CRLF
+        has_standalone_cr = b'\r' in content_without_crlf
+
+        return has_crlf, has_standalone_lf, has_standalone_cr
+    
+    def __calculate_opposite_line_ending_hash(self, contents: bytes):
+        """Calculate hash for contents with opposite line endings.
+        If the file is primarily Unix (LF), calculates Windows (CRLF) hash.
+        If the file is primarily Windows (CRLF), calculates Unix (LF) hash.
+        Args:
+            contents: File contents as bytes.
+        Returns:
+            Hash with opposite line endings as hex string, or None if no line endings detected.
+        """
+        has_crlf, has_standalone_lf, has_standalone_cr = self.__detect_line_endings(contents)
+
+        if not has_crlf and not has_standalone_lf and not has_standalone_cr:
+            return None
+
+        # Normalize all line endings to LF first
+        normalized = contents.replace(b'\r\n', b'\n').replace(b'\r', b'\n')
+
+        # Determine the dominant line ending type
+        if has_crlf and not has_standalone_lf and not has_standalone_cr:
+            # File is Windows (CRLF) - produce Unix (LF) hash
+            opposite_contents = normalized
+        else:
+            # File is Unix (LF/CR) or mixed - produce Windows (CRLF) hash
+            opposite_contents = normalized.replace(b'\n', b'\r\n')
+
+        return hashlib.md5(opposite_contents).hexdigest()
 
     def wfp_for_file(self, path: str, file: str) -> str:
         """
@@ -301,7 +346,7 @@ class Winnowing:
         content_length = len(contents)
         original_filename = file
 
-        if platform.system() == 'Windows':
+        if self.is_windows:
             original_filename = file.replace('\\', '/')
         wfp_filename = repr(original_filename).strip("'")  # return a utf-8 compatible version of the filename
         if self.obfuscate:  # hide the real size of the file and its name, but keep the suffix
@@ -310,6 +355,13 @@ class Winnowing:
             self.file_map[wfp_filename] = original_filename  # Save the file name map for later (reverse lookup)
 
         wfp = 'file={0},{1},{2}\n'.format(file_md5, content_length, wfp_filename)
+        
+        # Add opposite line ending hash based on line ending analysis
+        if not bin_file:
+            opposite_hash = self.__calculate_opposite_line_ending_hash(contents)
+            if opposite_hash is not None:
+                wfp += f'fh2={opposite_hash}\n'
+
         # We don't process snippets for binaries, or other uninteresting files, or if we're requested to skip
         if bin_file or self.skip_snippets or\
                 (not self.all_extensions and self.__skip_snippets(file, contents.decode('utf-8', 'ignore'))):
@@ -330,7 +382,7 @@ class Winnowing:
         # Run the C implementation of the winnowing algorithm
         if self.c_accelerated:
             import _winnowing
-            self.print_trace(f'Using winnowing C code...')
+            self.print_trace('Using winnowing C code...')
             res = _winnowing.compute_wfd(contents, crc32c)
             wfp = wfp + str.lstrip(b''.join(res).decode('ascii'))
             wfp_len = len(wfp.encode("utf-8"))
@@ -344,7 +396,7 @@ class Winnowing:
             if self.strip_snippet_ids:
                 wfp = self.__strip_snippets(file, wfp)
             return wfp
-        self.print_trace(f'Using Python code...')
+        self.print_trace('Using Python code...')
         # Initialize variables
         gram = bytearray()
         window = []
