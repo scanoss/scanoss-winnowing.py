@@ -37,6 +37,9 @@ from typing import Tuple
 from crc32c import crc32c
 from binaryornot.check import is_binary
 
+from .line_filter import LineFilter
+from .scanossbase import ScanossBase
+
 # Winnowing configuration. DO NOT CHANGE.
 GRAM = 30
 WINDOW = 64
@@ -68,7 +71,7 @@ CRC8_MAXIM_DOW_INITIAL = 0x00  # 0x00 reflected
 CRC8_MAXIM_DOW_FINAL = 0x00  # 0x00 reflected
 
 
-class Winnowing:
+class Winnowing(ScanossBase):
     """
     Winnowing Algorithm implementation for SCANOSS.
 
@@ -114,7 +117,8 @@ class Winnowing:
     def __init__(self, size_limit: bool = False, debug: bool = False, trace: bool = False, quiet: bool = False,
                  skip_snippets: bool = False, post_size: int = 32, all_extensions: bool = False,
                  obfuscate: bool = False, hpsm: bool = False, c_accelerated: bool = True,
-                 strip_snippet_ids=None, strip_hpsm_ids=None, skip_md5_ids=None
+                 strip_snippet_ids=None, strip_hpsm_ids=None, skip_md5_ids=None, skip_headers: bool = False,
+
                  ):
         """
         Instantiate Winnowing class
@@ -128,17 +132,16 @@ class Winnowing:
         :param obfuscate: Obfuscate the filenames - default False
         :param c_accelerated: Use C implementation - default True
         """
+        super().__init__(debug=debug, trace=trace, quiet=quiet)
         if strip_hpsm_ids is None:
             strip_hpsm_ids = []
         if strip_snippet_ids is None:
             strip_snippet_ids = []
         if skip_md5_ids is None:
             skip_md5_ids = []
-        self.debug = debug
-        self.trace = trace
-        self.quiet = quiet
         self.size_limit = size_limit
         self.skip_snippets = skip_snippets
+        self.skip_headers = skip_headers
         self.max_post_size = post_size * 1024 if post_size > 0 else MAX_POST_SIZE
         self.all_extensions = all_extensions
         self.c_accelerated = c_accelerated
@@ -150,6 +153,7 @@ class Winnowing:
         self.strip_snippet_ids = strip_snippet_ids
         self.hpsm = hpsm
         self.is_windows = platform.system() == 'Windows'
+        self.line_filter = LineFilter(debug=debug, trace=trace, quiet=quiet)
         if hpsm:
             self.crc8_maxim_dow_table = []
             self.crc8_generate_table()
@@ -328,6 +332,49 @@ class Winnowing:
             wfp = re.sub(r'\d+=\s+', '', wfp)  # Cleanup empty lines
             self.print_debug(f'Stripped snippet ids from {file}')
         return wfp
+    
+    def __strip_lines_until_offset(self, file: str, wfp: str, line_offset: int) -> str:
+        """
+        Strip lines from the WFP up to and including the line_offset
+
+        :param file: name of fingerprinted file
+        :param wfp: WFP to clean
+        :param line_offset: line number offset to strip up to
+        :return: updated WFP
+        """
+        if line_offset <= 0:
+            return wfp
+
+        wfp_len = len(wfp)
+        lines = wfp.split('\n')
+        filtered_lines = []
+        start_line_added = False
+
+        for line in lines:
+            # Check if line contains snippet data (format: line_number=hash,hash,...)
+            if '=' in line and line[0].isdigit():
+                try:
+                    line_num = int(line.split('=')[0])
+                    # Keep lines that are after the offset
+                    if line_num > line_offset:
+                        # Add start_line tag before the first snippet line
+                        if not start_line_added:
+                            filtered_lines.append(f'start_line={line_offset}')
+                            start_line_added = True
+                        filtered_lines.append(line)
+                except (ValueError, IndexError):
+                    # Keep non-snippet lines (like file=, hpsm=, etc.)
+                    filtered_lines.append(line)
+            else:
+                # Keep non-snippet lines (like file=, hpsm=, etc.)
+                filtered_lines.append(line)
+
+        wfp = '\n'.join(filtered_lines)
+
+        if wfp_len > len(wfp):
+            self.print_debug(f'Stripped lines up to offset {line_offset} from {file}')
+
+        return wfp
 
     def wfp_for_contents(self, file: str, bin_file: bool, contents: bytes) -> str:
         """
@@ -393,8 +440,15 @@ class Winnowing:
                 wfp = wfp[0:limit]
                 wfp = wfp[0:wfp.rindex('\n', 0, limit)]
             wfp += "\n"
+           
             if self.strip_snippet_ids:
                 wfp = self.__strip_snippets(file, wfp)
+
+            # Apply line filter to remove headers, comments, and imports from the beginning (if enabled)
+            if self.skip_headers:
+                _, line_offset = self.line_filter.filter(file, bin_file, contents)
+                if line_offset > 0:
+                    wfp = self.__strip_lines_until_offset(file, wfp, line_offset)
             return wfp
         self.print_trace('Using Python code...')
         # Initialize variables
@@ -458,6 +512,11 @@ class Winnowing:
             self.print_stderr(f'Warning: No WFP content data for {file}')
         elif self.strip_snippet_ids:
             wfp = self.__strip_snippets(file, wfp)
+        # Apply line filter to remove headers, comments, and imports from the beginning (if enabled)
+        if self.skip_headers:
+            _, line_offset = self.line_filter.filter(file, bin_file, contents)
+            if line_offset > 0:
+                wfp = self.__strip_lines_until_offset(file, wfp, line_offset)
         return wfp
 
     def calc_hpsm(self, content):
@@ -540,33 +599,6 @@ class Winnowing:
         crc ^= CRC8_MAXIM_DOW_FINAL  # Bitwise OR (XOR) of crc in Maxim Dow Final
         return crc
 
-    def print_msg(self, *args, **kwargs):
-        """
-        Print message if quite mode is not enabled
-        """
-        if not self.quiet:
-            self.print_stderr(*args, **kwargs)
-
-    def print_debug(self, *args, **kwargs):
-        """
-        Print debug message if enabled
-        """
-        if self.debug:
-            self.print_stderr(*args, **kwargs)
-
-    def print_trace(self, *args, **kwargs):
-        """
-        Print trace message if enabled
-        """
-        if self.trace:
-            self.print_stderr(*args, **kwargs)
-
-    @staticmethod
-    def print_stderr(*args, **kwargs):
-        """
-        Print the given message to STDERR
-        """
-        print(*args, file=sys.stderr, **kwargs)
 #
 # End of Winnowing Class
 #

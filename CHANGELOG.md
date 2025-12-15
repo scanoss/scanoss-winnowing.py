@@ -8,6 +8,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 ### Added
 - Upcoming changes...
+
+## [0.7.0] - 2025-12-15
+### Added
+- Add `skip-headers` flag
+### Modified
+- Update winnowing.py to inherit from scanossbase.py for logging
   
 ## [0.6.0] - 2025-06-10
 ### Added
