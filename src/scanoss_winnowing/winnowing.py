@@ -446,7 +446,7 @@ class Winnowing(ScanossBase):
 
             # Apply line filter to remove headers, comments, and imports from the beginning (if enabled)
             if self.skip_headers:
-                _, line_offset = self.header_filter.filter(file, bin_file, contents)
+                line_offset = self.header_filter.filter(file, bin_file, contents)
                 if line_offset > 0:
                     wfp = self.__strip_lines_until_offset(file, wfp, line_offset)
             return wfp
@@ -514,7 +514,7 @@ class Winnowing(ScanossBase):
             wfp = self.__strip_snippets(file, wfp)
         # Apply line filter to remove headers, comments, and imports from the beginning (if enabled)
         if self.skip_headers:
-            _, line_offset = self.header_filter.filter(file, bin_file, contents)
+            line_offset = self.header_filter.filter(file, bin_file, contents)
             if line_offset > 0:
                 wfp = self.__strip_lines_until_offset(file, wfp, line_offset)
         return wfp

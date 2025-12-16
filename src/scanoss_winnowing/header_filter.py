@@ -1,7 +1,7 @@
 """
 SPDX-License-Identifier: MIT
 
-  Copyright (c) 2021, SCANOSS
+  Copyright (c) 2025, SCANOSS
 
   Permission is hereby granted, free of charge, to any person obtaining a copy
   of this software and associated documentation files (the "Software"), to deal
@@ -33,23 +33,10 @@ SPDX-License-Identifier: MIT
 """
 
 import re
-from enum import Enum
 from pathlib import Path
 from typing import Optional, Tuple
 
 from .scanossbase import ScanossBase
-
-
-class LineType(Enum):
-    """Line types that are not real implementation"""
-    LICENSE_HEADER = "license_header"
-    COMMENT = "comment"
-    IMPORT = "import"
-    BLANK = "blank"
-    SHEBANG = "shebang"
-    IMPLEMENTATION = "implementation"
-
-
 
 
 class LanguagePatterns:
@@ -57,7 +44,8 @@ class LanguagePatterns:
 
     # Comment patterns (single-line and multi-line start/end)
     COMMENT_PATTERNS = {
-        # C-style (C, C++, Java, JavaScript, TypeScript, Go, Rust, C#, PHP, Kotlin, Scala, Dart, Objective-C)
+        # C-style languages: C, C++, Java, JavaScript, TypeScript, Go,
+        # Rust, C#, PHP, Kotlin, Scala, Dart, Objective-C
         'c_style': {
             'single_line': r'^\s*//.*$',
             'multi_start': r'^\s*/\*',
@@ -122,9 +110,10 @@ class LanguagePatterns:
             r'^\s*import\s+\(',
             r'^\s*import\s+"',
             r'^\s*package\s+',
-            r'^\s*"[^"]*"\s*$',  # Imports dentro del bloque import ()
-            r'^\s*[a-zA-Z_][a-zA-Z0-9_]*\s+"[^"]*"\s*$',  # Imports con alias: name "package"
-            r'^\s*_\s+"[^"]*"\s*$',  # Imports con underscore: _ "package"
+            r'^\s*"[^"]*"\s*$',  # Imports inside import () block
+            # Imports with alias: name "package"
+            r'^\s*[a-zA-Z_][a-zA-Z0-9_]*\s+"[^"]*"\s*$',
+            r'^\s*_\s+"[^"]*"\s*$',  # _ "package" imports
         ],
         'rust': [
             r'^\s*use\s+',
@@ -136,7 +125,8 @@ class LanguagePatterns:
             r'^\s*#pragma\s+',
             r'^\s*#ifndef\s+.*_H.*',  # Header guards: #ifndef FOO_H
             r'^\s*#define\s+.*_H.*',  # Header guards: #define FOO_H
-            r'^\s*#endif\s+(//.*)?\s*$',  # #endif at end of file (may have comment)
+            # #endif at end of file (may have comment)
+            r'^\s*#endif\s+(//.*)?\s*$',
         ],
         'csharp': [
             r'^\s*using\s+',
@@ -201,28 +191,40 @@ class LanguagePatterns:
         'spdx-license', 'contributors', 'licensee'
     ]
 
+COMPLETE_DOCSTRING_QUOTE_COUNT = 2
+LICENSE_HEADER_MAX_LINES = 50
+
 
 class HeaderFilter(ScanossBase):
     """
     Source code file analyzer that filters headers, comments and imports.
 
-    This class processes code files and returns only the real implementation content,
-    omitting licenses, documentation comments and imports.
+    This class processes code files and returns only the real
+    implementation content, omitting licenses, documentation comments
+    and imports.
     """
 
-    def __init__(self, max_lines: Optional[int] = None, debug: bool = False, trace: bool = False, quiet: bool = False):
+    def __init__(
+        self,
+        max_lines: Optional[int] = None,
+        debug: bool = False,
+        trace: bool = False,
+        quiet: bool = False
+    ):
         """
         Initialize HeaderFilter
         Parameters
         ----------
             max_lines: int
-                Maximum number of lines to return (None = unlimited by default)
+                Maximum line number to analyze. If implementation is found
+                beyond this line, will cap at max_lines.
+                (None = unlimited by default)
         """
         super().__init__(debug, trace, quiet)
         self.patterns = LanguagePatterns()
         self.max_lines = max_lines
 
-    def filter(self, file: str, bin_file: bool, contents: bytes) -> tuple:
+    def filter(self, file: str, bin_file: bool, contents: bytes) -> int:
         """
         Main method that filters file content
         Parameters
@@ -232,16 +234,15 @@ class HeaderFilter(ScanossBase):
             :param contents: File contents in bytes
         Return
         ------
-            Tuple of (filtered_content: bytes, line_offset: int)
-            - filtered_content: Filtered content from where implementation code begins
-            - line_offset: Number of lines skipped from the beginning (0 if no filtering)
+            - line_offset: Number of lines skipped from the beginning
+              (0 if no filtering)
         """
         self.print_debug(f'HeaderFilter processing file: {file}')
 
         # If binary file, return without processing
         if bin_file:
             self.print_debug(f'Skipping line filter for binary file: {file}')
-            return contents, 0
+            return 0
 
         # Detect language
         language = self.detect_language(file)
@@ -249,49 +250,42 @@ class HeaderFilter(ScanossBase):
         # If language is not supported, return original content
         if not language:
             self.print_debug(f'Skipping line filter for unsupported language: {file}')
-            return contents, 0
-        
+            return 0
         try:
             # Decode content to UTF-8
             text_content = contents.decode('utf-8')
         except UnicodeDecodeError:
             # If decoding fails, return original content
             self.print_debug(f'Skipping line filter due to UTF-8 decode error: {file}')
-            return contents, 0
+            return 0
 
         # Split into lines keeping line endings
         lines = text_content.splitlines(keepends=True)
-        total_lines = len(lines)
-        self.print_debug(f'Analyzing {total_lines} lines for file: {file}')
+        self.print_debug(f'Analyzing {len(lines)} lines for file: {file}')
 
         # Find first implementation line (optimized - stops at first match)
         implementation_start = self.find_first_implementation_line(lines, language)
 
         # If no implementation, return empty
-        if implementation_start is None or implementation_start > len(lines):
+        if implementation_start is None:
             self.print_debug(f'No implementation found in file: {file}')
-            return b'', 0
+            return 0
 
         # Calculate how many lines were filtered out (line_offset)
         line_offset = implementation_start - 1
+
+        # Apply max_lines limit if configured
+        if self.max_lines is not None and line_offset > self.max_lines:
+            self.print_debug(
+                f'Line offset {line_offset} exceeds max_lines {self.max_lines}, '
+                f'capping at {self.max_lines} for: {file}'
+            )
+            line_offset = self.max_lines
+
         if line_offset > 0:
             self.print_debug(f'Filtered out {line_offset} lines from beginning of {file} (language: {language})')
 
-        # Get lines from implementation (0-indexed)
-        start_idx = implementation_start - 1
-        filtered_lines = lines[start_idx:]
-
-        # Apply line limit if configured
-        if self.max_lines is not None:
-            original_count = len(filtered_lines)
-            filtered_lines = filtered_lines[:self.max_lines]
-            if original_count > self.max_lines:
-                self.print_debug(f'Truncating to {self.max_lines} lines for: {file}')
-
-        # Join lines and convert to bytes
-        filtered_content = ''.join(filtered_lines)
-        return filtered_content.encode('utf-8'), line_offset
-
+        return line_offset
 
     def detect_language(self, file_path: str) -> Optional[str]:
         """Detect language based on file extension"""
@@ -337,7 +331,9 @@ class HeaderFilter(ScanossBase):
             '.cljs': 'clojure',
             '.m': 'cpp',  # Objective-C
             '.mm': 'cpp',  # Objective-C++
-            '.sh': 'python',  # Shell scripts usan # como comentario
+            # Shell scripts share Python's # comment style, but lack dedicated
+            # import patterns (source/. commands won't be filtered)
+            '.sh': 'python',
             '.bash': 'python',
             '.zsh': 'python',
             '.fish': 'python',
@@ -369,14 +365,13 @@ class HeaderFilter(ScanossBase):
         if language in ['cpp', 'java', 'kotlin', 'scala', 'javascript', 'typescript',
                         'go', 'rust', 'csharp', 'php', 'swift', 'dart']:
             return 'c_style'
-        elif language in ['python', 'ruby', 'perl', 'r']:
+        if language in ['python', 'ruby', 'perl', 'r']:
             return 'python_style'
-        elif language in ['lua', 'haskell']:
+        if language in ['lua', 'haskell']:
             return 'lua_style'
-        else:
-            return 'c_style'  # Default
+        return 'c_style'  # Default
 
-    def is_comment(self, line: str, language: str, in_multiline: bool) -> Tuple[bool, bool]:
+    def is_comment(self, line: str, language: str, in_multiline: bool) -> Tuple[bool, bool]:  # noqa: PLR0911
         """
         Check if a line is a comment
 
@@ -385,7 +380,6 @@ class HeaderFilter(ScanossBase):
         :param in_multiline: Whether we're currently in a multiline comment
         :return: Tuple of (is_comment, still_in_multiline)
         """
-        stripped = line.strip()
         style = self.get_comment_style(language)
         patterns = self.patterns.COMMENT_PATTERNS[style]
 
@@ -417,9 +411,9 @@ class HeaderFilter(ScanossBase):
         if 'doc_string_start' in patterns and '"""' in line:
             # Count how many quotes there are
             count = line.count('"""')
-            if count == 2:  # Complete docstring in one line
+            if count == COMPLETE_DOCSTRING_QUOTE_COUNT:  # Complete docstring in one line
                 return True, False
-            elif count == 1:  # Start of multiline docstring
+            if count == 1:  # Start of multiline docstring
                 return True, True
 
         return False, in_multiline
@@ -432,7 +426,7 @@ class HeaderFilter(ScanossBase):
         patterns = self.patterns.IMPORT_PATTERNS[language]
         return any(re.match(pattern, line) for pattern in patterns)
 
-    def find_first_implementation_line(self, lines: list[str], language: str) -> Optional[int]:
+    def find_first_implementation_line(self, lines: list[str], language: str) -> Optional[int]:  # noqa: PLR0912
         """
         Find the line number where implementation begins (optimized version).
         Returns as soon as the first implementation line is found.
@@ -469,18 +463,17 @@ class HeaderFilter(ScanossBase):
                     if not in_license_section:
                         self.print_debug(f'Line {line_number}: Detected license header section')
                     in_license_section = True
+                # If still in license section (first lines)
+                elif in_license_section and line_number < LICENSE_HEADER_MAX_LINES:
+                    pass  # Still in license section
                 else:
-                    # If still in license section (first lines)
-                    if in_license_section and line_number < 50:
-                        pass  # Still in license section
-                    else:
-                        if in_license_section:
-                            self.print_debug(f'Line {line_number}: End of license header section')
-                        in_license_section = False
+                    if in_license_section:
+                        self.print_debug(f'Line {line_number}: End of license header section')
+                    in_license_section = False
                 continue
 
             # If not a comment but we find a non-empty line, end license section
-            if not is_comment and not self.is_blank_line(line):
+            if not is_comment:
                 in_license_section = False
 
             # Handle import blocks in Go
@@ -489,12 +482,13 @@ class HeaderFilter(ScanossBase):
                     self.print_debug(f'Line {line_number}: Detected Go import block start')
                     in_import_block = True
                     continue
-                elif in_import_block:
+                if in_import_block:
                     if stripped == ')':
                         self.print_debug(f'Line {line_number}: Detected Go import block end')
                         in_import_block = False
                         continue
-                    elif stripped.startswith('"') or stripped.startswith('_'):
+                    if (stripped.startswith('"') or stripped.startswith('_') or
+                            re.match(r'^[a-zA-Z_][a-zA-Z0-9_]*\s+"', stripped)):
                         # It's part of the import block
                         continue
 
@@ -504,9 +498,6 @@ class HeaderFilter(ScanossBase):
                     self.print_debug(f'Line {line_number}: Detected import section')
                 consecutive_imports_count += 1
                 continue
-
-            # Reset consecutive imports counter when we find real code
-            consecutive_imports_count = 0
 
             # If we get here, it's implementation code - return immediately!
             self.print_debug(f'Line {line_number}: First implementation line detected')
