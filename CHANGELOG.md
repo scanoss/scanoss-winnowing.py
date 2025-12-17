@@ -8,6 +8,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 ### Added
 - Upcoming changes...
+
+## [0.7.0] - 2025-12-17
+### Added
+- Add support for file header filtering: `skip-headers`
+  - This option will skip uninteresting data, such as copyrights, imports, etc. at the start of a file.
+### Modified
+- Update winnowing.py to inherit from scanossbase.py for logging
   
 ## [0.6.0] - 2025-06-10
 ### Added
@@ -66,3 +73,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 [0.5.3]: https://github.com/scanoss/scanoss-winnowing.py/compare/v0.5.2...v0.5.3
 [0.5.4]: https://github.com/scanoss/scanoss-winnowing.py/compare/v0.5.3...v0.5.4
 [0.6.0]: https://github.com/scanoss/scanoss-winnowing.py/compare/v0.5.4...v0.6.0
+[0.7.0]: https://github.com/scanoss/scanoss-winnowing.py/compare/v0.6.0...v0.7.0
+

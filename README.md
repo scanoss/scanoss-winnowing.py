@@ -23,7 +23,7 @@ pip3 install scanoss[fast_winnowing]
 Before starting with development of this project, please read our [CONTRIBUTING](CONTRIBUTING.md) and [CODE OF CONDUCT](CODE_OF_CONDUCT.md).
 
 ## Requirements
-Python 3.7 or higher.
+Python 3.9 or higher.
 
 The dependencies can be found in the [requirements.txt](requirements.txt) and [requirements-dev.txt](requirements-dev.txt) files.
 

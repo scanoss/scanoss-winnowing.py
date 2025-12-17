@@ -30,12 +30,14 @@
 import hashlib
 import pathlib
 import platform
-import sys
 import re
 from typing import Tuple
 
 from crc32c import crc32c
 from binaryornot.check import is_binary
+
+from .header_filter import HeaderFilter
+from .scanossbase import ScanossBase
 
 # Winnowing configuration. DO NOT CHANGE.
 GRAM = 30
@@ -55,11 +57,56 @@ MAX_POST_SIZE = 64 * 1024  # 64k Max post size
 MIN_FILE_SIZE = 256
 
 SKIP_SNIPPET_EXT = {  # File extensions to ignore snippets for
-    ".exe", ".zip", ".tar", ".tgz", ".gz", ".7z", ".rar", ".jar", ".war", ".ear", ".class", ".pyc",
-    ".o", ".a", ".so", ".obj", ".dll", ".lib", ".out", ".app", ".bin",
-    ".lst", ".dat", ".json", ".htm", ".html", ".xml", ".md", ".txt",
-    ".doc", ".docx", ".xls", ".xlsx", ".ppt", ".pptx", ".odt", ".ods", ".odp", ".pages", ".key", ".numbers",
-    ".pdf", ".min.js", ".mf", ".sum", ".woff", ".woff2", ".xsd", ".pom", ".whl"
+    '.exe',
+    '.zip',
+    '.tar',
+    '.tgz',
+    '.gz',
+    '.7z',
+    '.rar',
+    '.jar',
+    '.war',
+    '.ear',
+    '.class',
+    '.pyc',
+    '.o',
+    '.a',
+    '.so',
+    '.obj',
+    '.dll',
+    '.lib',
+    '.out',
+    '.app',
+    '.bin',
+    '.lst',
+    '.dat',
+    '.json',
+    '.htm',
+    '.html',
+    '.xml',
+    '.md',
+    '.txt',
+    '.doc',
+    '.docx',
+    '.xls',
+    '.xlsx',
+    '.ppt',
+    '.pptx',
+    '.odt',
+    '.ods',
+    '.odp',
+    '.pages',
+    '.key',
+    '.numbers',
+    '.pdf',
+    '.min.js',
+    '.mf',
+    '.sum',
+    '.woff',
+    '.woff2',
+    '.xsd',
+    '.pom',
+    '.whl',
 }
 
 CRC8_MAXIM_DOW_TABLE_SIZE = 0x100
@@ -68,7 +115,7 @@ CRC8_MAXIM_DOW_INITIAL = 0x00  # 0x00 reflected
 CRC8_MAXIM_DOW_FINAL = 0x00  # 0x00 reflected
 
 
-class Winnowing:
+class Winnowing(ScanossBase):
     """
     Winnowing Algorithm implementation for SCANOSS.
 
@@ -114,31 +161,46 @@ class Winnowing:
     def __init__(self, size_limit: bool = False, debug: bool = False, trace: bool = False, quiet: bool = False,
                  skip_snippets: bool = False, post_size: int = 32, all_extensions: bool = False,
                  obfuscate: bool = False, hpsm: bool = False, c_accelerated: bool = True,
-                 strip_snippet_ids=None, strip_hpsm_ids=None, skip_md5_ids=None
+                 strip_snippet_ids=None, strip_hpsm_ids=None, skip_md5_ids=None, 
+                 skip_headers: bool = False, skip_headers_limit: int = 0,
+
                  ):
         """
-        Instantiate Winnowing class
-        :param size_limit: Limit the size of a fingerprint to 64k (post size) - default True
-        :param debug: Enable debug - default False
-        :param trace: Enable trace - default False
-        :param quiet: Force quiet mode - default False
-        :param skip_snippets: Skip snippets - default False
-        :param post_size: Limit the size of a WFP per file - default 64k
-        :param all_extensions: Process all extensions - default False
-        :param obfuscate: Obfuscate the filenames - default False
-        :param c_accelerated: Use C implementation - default True
+        Initializes an instance of the class with configurable attributes for
+        debugging, obfuscation, and filtering, among other customization options.
+
+        :param size_limit: Boolean flag indicating whether to enforce size limits.
+        :param debug: Boolean flag to enable debug mode for verbose output.
+        :param trace: Boolean flag to enable tracing mode for detailed execution flow.
+        :param quiet: Boolean flag to suppress non-essential output.
+        :param skip_snippets: Boolean flag indicating whether to skip code snippets.
+        :param post_size: Maximum size for post-processing, in kilobytes.
+        :param all_extensions: Boolean flag determining if all extensions should
+            be included.
+        :param obfuscate: Boolean flag to enable file name obfuscation.
+        :param hpsm: Boolean flag indicating whether to use HPSM-specific processing.
+        :param c_accelerated: Boolean flag to enable C-accelerated components.
+        :param strip_snippet_ids: List of snippet IDs to be filtered, initialized
+            as an empty list if not provided.
+        :param strip_hpsm_ids: List of HPSM IDs to be filtered, initialized
+            as an empty list if not provided.
+        :param skip_md5_ids: List of MD5 hash IDs to be skipped, initialized as
+            an empty list if not provided.
+        :param skip_headers: Boolean flag indicating whether to skip headers during
+            processing.
+        :param skip_headers_limit: Maximum number of header lines to skip, as an
+            integer. If not set, no limit is applied.
         """
+        super().__init__(debug=debug, trace=trace, quiet=quiet)
         if strip_hpsm_ids is None:
             strip_hpsm_ids = []
         if strip_snippet_ids is None:
             strip_snippet_ids = []
         if skip_md5_ids is None:
             skip_md5_ids = []
-        self.debug = debug
-        self.trace = trace
-        self.quiet = quiet
         self.size_limit = size_limit
         self.skip_snippets = skip_snippets
+        self.skip_headers = skip_headers
         self.max_post_size = post_size * 1024 if post_size > 0 else MAX_POST_SIZE
         self.all_extensions = all_extensions
         self.c_accelerated = c_accelerated
@@ -150,9 +212,11 @@ class Winnowing:
         self.strip_snippet_ids = strip_snippet_ids
         self.hpsm = hpsm
         self.is_windows = platform.system() == 'Windows'
+        self.header_filter = HeaderFilter(debug=debug, trace=trace, quiet=quiet, skip_limit=skip_headers_limit)
         if hpsm:
             self.crc8_maxim_dow_table = []
             self.crc8_generate_table()
+
     @staticmethod
     def _normalize(byte):
         """
@@ -328,6 +392,48 @@ class Winnowing:
             wfp = re.sub(r'\d+=\s+', '', wfp)  # Cleanup empty lines
             self.print_debug(f'Stripped snippet ids from {file}')
         return wfp
+    
+    def __strip_lines_until_offset(self, file: str, wfp: str, line_offset: int) -> str:
+        """
+        Strip lines from the WFP up to and including the line_offset
+
+        :param file: name of fingerprinted file
+        :param wfp: WFP to clean
+        :param line_offset: line number offset to strip up to
+        :return: updated WFP
+        """
+        # No offset specified, return original WFP
+        if line_offset <= 0:
+            return wfp
+        lines = wfp.split('\n')
+        filtered_lines = []
+        start_line_added = False
+        for line in lines:
+            # Check if a line contains snippet data (format: line_number=hash,hash,...)
+            line_details = line.split('=')
+            if line_details[0].isdigit():
+                try:
+                    line_num = int(line_details[0])
+                    # Keep lines that are after the offset
+                    # (line_offset is the last line previous to real code)
+                    if line_num > line_offset:
+                        # Add the start_line tag before the first snippet line
+                        if not start_line_added:
+                            filtered_lines.append(f'start_line={line_offset}')
+                            start_line_added = True
+                        filtered_lines.append(line)
+                except (ValueError, IndexError) as e:
+                    self.print_stderr(f'Error decoding line number from line {line} in {file}: {e}')
+                    # Keep non-snippet lines (like file=, hpsm=, etc.)
+                    filtered_lines.append(line)
+            else:
+                # Keep non-snippet lines (like file=, hpsm=, etc.)
+                filtered_lines.append(line)
+        # End for loop comment
+        wfp = '\n'.join(filtered_lines)
+        if start_line_added:
+            self.print_debug(f'Stripped lines up to offset {line_offset} from {file}')
+        return wfp
 
     def wfp_for_contents(self, file: str, bin_file: bool, contents: bytes) -> str:
         """
@@ -361,10 +467,10 @@ class Winnowing:
             opposite_hash = self.__calculate_opposite_line_ending_hash(contents)
             if opposite_hash is not None:
                 wfp += f'fh2={opposite_hash}\n'
-
         # We don't process snippets for binaries, or other uninteresting files, or if we're requested to skip
+        decoded_contents = contents.decode('utf-8', 'ignore')
         if bin_file or self.skip_snippets or\
-                (not self.all_extensions and self.__skip_snippets(file, contents.decode('utf-8', 'ignore'))):
+                (not self.all_extensions and self.__skip_snippets(file, decoded_contents)):
             return wfp
         # Add HPSM
         if self.hpsm:
@@ -393,6 +499,12 @@ class Winnowing:
                 wfp = wfp[0:limit]
                 wfp = wfp[0:wfp.rindex('\n', 0, limit)]
             wfp += "\n"
+            # Apply line filter to remove headers, comments, and imports from the beginning (if enabled)
+            if self.skip_headers:
+                line_offset = self.header_filter.filter(file, decoded_contents)
+                if line_offset > 0:
+                    wfp = self.__strip_lines_until_offset(file, wfp, line_offset)
+            # Strip unwanted snippets
             if self.strip_snippet_ids:
                 wfp = self.__strip_snippets(file, wfp)
             return wfp
@@ -456,8 +568,15 @@ class Winnowing:
                 self.print_debug(f'Warning: skipping output in WFP for {file} - "{output}"')
         if wfp is None or wfp == '':
             self.print_stderr(f'Warning: No WFP content data for {file}')
-        elif self.strip_snippet_ids:
-            wfp = self.__strip_snippets(file, wfp)
+        else:
+            # Apply line filter to remove headers, comments, and imports from the beginning (if enabled)
+            if self.skip_headers:
+                line_offset = self.header_filter.filter(file, decoded_contents)
+                if line_offset > 0:
+                    wfp = self.__strip_lines_until_offset(file, wfp, line_offset)
+            # Strip unwanted snippets
+            if self.strip_snippet_ids:
+                wfp = self.__strip_snippets(file, wfp)
         return wfp
 
     def calc_hpsm(self, content):
@@ -540,33 +659,6 @@ class Winnowing:
         crc ^= CRC8_MAXIM_DOW_FINAL  # Bitwise OR (XOR) of crc in Maxim Dow Final
         return crc
 
-    def print_msg(self, *args, **kwargs):
-        """
-        Print message if quite mode is not enabled
-        """
-        if not self.quiet:
-            self.print_stderr(*args, **kwargs)
-
-    def print_debug(self, *args, **kwargs):
-        """
-        Print debug message if enabled
-        """
-        if self.debug:
-            self.print_stderr(*args, **kwargs)
-
-    def print_trace(self, *args, **kwargs):
-        """
-        Print trace message if enabled
-        """
-        if self.trace:
-            self.print_stderr(*args, **kwargs)
-
-    @staticmethod
-    def print_stderr(*args, **kwargs):
-        """
-        Print the given message to STDERR
-        """
-        print(*args, file=sys.stderr, **kwargs)
 #
 # End of Winnowing Class
 #
