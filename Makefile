@@ -29,11 +29,17 @@ unit_test:  ## Run unit tests
 	@echo "Running unit tests..."
 	python3 -m unittest tests/winnowing-test.py
 
-lint: ## Run ruff linter locally
+lint:  ## Run ruff linter locally
 	@./tools/linter.sh
 
-lint-fix: ## Run ruff linter locally with auto-fix
+lint-fix:  ## Run ruff linter locally with auto-fix
 	@./tools/linter.sh --fix
+
+lint-all:  ## Run ruff linter locally for all files
+	@./tools/linter.sh --all
+
+lint-fix-all:  ## Run ruff linter locally with auto-fix for all files
+	@./tools/linter.sh --fix --all
 
 src_dist: clean dev_uninstall  ## Build the source distribution
 	@echo "Build source package for distribution $(VERSION)..."
