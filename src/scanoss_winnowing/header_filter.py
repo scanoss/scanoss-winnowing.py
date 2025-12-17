@@ -504,8 +504,8 @@ class HeaderFilter(ScanossBase):
         in_import_block = False  # To handle import blocks in Go
         consecutive_imports_count = 0
         # Get comment & import patterns for the language
-        comment_patterns = self.patterns.COMMENT_PATTERNS[self.get_comment_style(language)]
-        import_patterns = self.patterns.IMPORT_PATTERNS[language]
+        comment_patterns = self.patterns.COMMENT_PATTERNS.get(self.get_comment_style(language), {})
+        import_patterns = self.patterns.IMPORT_PATTERNS.get(language, [])
         # Iterate through lines trying to find the first implementation line
         for i, line in enumerate(lines):
             line_number = i + 1
