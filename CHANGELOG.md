@@ -9,9 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - Upcoming changes...
 
-## [0.7.0] - 2025-12-15
+## [0.7.0] - 2025-12-17
 ### Added
-- Add `skip-headers` flag
+- Add support for file header filtering: `skip-headers`
+  - This option will skip uninteresting data, such as copyrights, imports, etc. at the start of a file.
 ### Modified
 - Update winnowing.py to inherit from scanossbase.py for logging
   
