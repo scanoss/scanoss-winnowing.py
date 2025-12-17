@@ -1,3 +1,36 @@
 [build-system]
 requires = ["setuptools", "wheel", "twine", "Cython"]
 build-backend = "setuptools.build_meta"
+[project]
+name = "scanoss-winnowing"
+dynamic = ["version"]
+description = "Python Library implementing a C version of the SCANOSS Winnowing algorithm"
+readme = "PACKAGE.md"
+requires-python = ">=3.9"
+license = {text = "MIT"}
+authors = [
+    {name = "SCANOSS", email = "info@scanoss.com"}
+]
+urls = {Source = "https://github.com/scanoss/scanoss-winnowing.py", Tracker = "https://github.com/scanoss/scanoss-winnowing.py/issues"}
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Programming Language :: C",
+    "License :: OSI Approved :: MIT License",
+    "Development Status :: 5 - Production/Stable",
+    "Operating System :: POSIX :: Linux",
+    "Operating System :: MacOS :: MacOS X",
+    "Operating System :: Microsoft :: Windows",
+]
+dependencies = [
+    "crc32c>=2.2",
+    "binaryornot",
+]
+
+[tool.setuptools.dynamic]
+version = {attr = "scanoss_winnowing.__version__"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools]
+include-package-data = true
