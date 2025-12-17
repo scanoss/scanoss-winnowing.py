@@ -57,11 +57,56 @@ MAX_POST_SIZE = 64 * 1024  # 64k Max post size
 MIN_FILE_SIZE = 256
 
 SKIP_SNIPPET_EXT = {  # File extensions to ignore snippets for
-    ".exe", ".zip", ".tar", ".tgz", ".gz", ".7z", ".rar", ".jar", ".war", ".ear", ".class", ".pyc",
-    ".o", ".a", ".so", ".obj", ".dll", ".lib", ".out", ".app", ".bin",
-    ".lst", ".dat", ".json", ".htm", ".html", ".xml", ".md", ".txt",
-    ".doc", ".docx", ".xls", ".xlsx", ".ppt", ".pptx", ".odt", ".ods", ".odp", ".pages", ".key", ".numbers",
-    ".pdf", ".min.js", ".mf", ".sum", ".woff", ".woff2", ".xsd", ".pom", ".whl"
+    '.exe',
+    '.zip',
+    '.tar',
+    '.tgz',
+    '.gz',
+    '.7z',
+    '.rar',
+    '.jar',
+    '.war',
+    '.ear',
+    '.class',
+    '.pyc',
+    '.o',
+    '.a',
+    '.so',
+    '.obj',
+    '.dll',
+    '.lib',
+    '.out',
+    '.app',
+    '.bin',
+    '.lst',
+    '.dat',
+    '.json',
+    '.htm',
+    '.html',
+    '.xml',
+    '.md',
+    '.txt',
+    '.doc',
+    '.docx',
+    '.xls',
+    '.xlsx',
+    '.ppt',
+    '.pptx',
+    '.odt',
+    '.ods',
+    '.odp',
+    '.pages',
+    '.key',
+    '.numbers',
+    '.pdf',
+    '.min.js',
+    '.mf',
+    '.sum',
+    '.woff',
+    '.woff2',
+    '.xsd',
+    '.pom',
+    '.whl',
 }
 
 CRC8_MAXIM_DOW_TABLE_SIZE = 0x100
@@ -117,20 +162,34 @@ class Winnowing(ScanossBase):
                  skip_snippets: bool = False, post_size: int = 32, all_extensions: bool = False,
                  obfuscate: bool = False, hpsm: bool = False, c_accelerated: bool = True,
                  strip_snippet_ids=None, strip_hpsm_ids=None, skip_md5_ids=None, 
-                 skip_headers: bool = False, skip_headers_max_lines: int = 0,
+                 skip_headers: bool = False, skip_headers_limit: int = 0,
 
                  ):
         """
-        Instantiate Winnowing class
-        :param size_limit: Limit the size of a fingerprint to 64k (post size) - default True
-        :param debug: Enable debug - default False
-        :param trace: Enable trace - default False
-        :param quiet: Force quiet mode - default False
-        :param skip_snippets: Skip snippets - default False
-        :param post_size: Limit the size of a WFP per file - default 64k
-        :param all_extensions: Process all extensions - default False
-        :param obfuscate: Obfuscate the filenames - default False
-        :param c_accelerated: Use C implementation - default True
+        Initializes an instance of the class with configurable attributes for
+        debugging, obfuscation, and filtering, among other customization options.
+
+        :param size_limit: Boolean flag indicating whether to enforce size limits.
+        :param debug: Boolean flag to enable debug mode for verbose output.
+        :param trace: Boolean flag to enable tracing mode for detailed execution flow.
+        :param quiet: Boolean flag to suppress non-essential output.
+        :param skip_snippets: Boolean flag indicating whether to skip code snippets.
+        :param post_size: Maximum size for post-processing, in kilobytes.
+        :param all_extensions: Boolean flag determining if all extensions should
+            be included.
+        :param obfuscate: Boolean flag to enable file name obfuscation.
+        :param hpsm: Boolean flag indicating whether to use HPSM-specific processing.
+        :param c_accelerated: Boolean flag to enable C-accelerated components.
+        :param strip_snippet_ids: List of snippet IDs to be filtered, initialized
+            as an empty list if not provided.
+        :param strip_hpsm_ids: List of HPSM IDs to be filtered, initialized
+            as an empty list if not provided.
+        :param skip_md5_ids: List of MD5 hash IDs to be skipped, initialized as
+            an empty list if not provided.
+        :param skip_headers: Boolean flag indicating whether to skip headers during
+            processing.
+        :param skip_headers_limit: Maximum number of header lines to skip, as an
+            integer. If not set, no limit is applied.
         """
         super().__init__(debug=debug, trace=trace, quiet=quiet)
         if strip_hpsm_ids is None:
@@ -153,12 +212,11 @@ class Winnowing(ScanossBase):
         self.strip_snippet_ids = strip_snippet_ids
         self.hpsm = hpsm
         self.is_windows = platform.system() == 'Windows'
-        self.header_filter = HeaderFilter(
-            debug=debug, trace=trace, quiet=quiet, max_skipped_lines=skip_headers_max_lines or None
-        )        
+        self.header_filter = HeaderFilter(debug=debug, trace=trace, quiet=quiet, skip_limit=skip_headers_limit)
         if hpsm:
             self.crc8_maxim_dow_table = []
             self.crc8_generate_table()
+
     @staticmethod
     def _normalize(byte):
         """
@@ -441,13 +499,14 @@ class Winnowing(ScanossBase):
                 wfp = wfp[0:limit]
                 wfp = wfp[0:wfp.rindex('\n', 0, limit)]
             wfp += "\n"
-            if self.strip_snippet_ids:
-                wfp = self.__strip_snippets(file, wfp)
             # Apply line filter to remove headers, comments, and imports from the beginning (if enabled)
             if self.skip_headers:
                 line_offset = self.header_filter.filter(file, decoded_contents)
                 if line_offset > 0:
                     wfp = self.__strip_lines_until_offset(file, wfp, line_offset)
+            # Strip unwanted snippets
+            if self.strip_snippet_ids:
+                wfp = self.__strip_snippets(file, wfp)
             return wfp
         self.print_trace('Using Python code...')
         # Initialize variables
@@ -509,13 +568,15 @@ class Winnowing(ScanossBase):
                 self.print_debug(f'Warning: skipping output in WFP for {file} - "{output}"')
         if wfp is None or wfp == '':
             self.print_stderr(f'Warning: No WFP content data for {file}')
-        elif self.strip_snippet_ids:
-            wfp = self.__strip_snippets(file, wfp)
-        # Apply line filter to remove headers, comments, and imports from the beginning (if enabled)
-        if self.skip_headers:
-            line_offset = self.header_filter.filter(file, decoded_contents)
-            if line_offset > 0:
-                wfp = self.__strip_lines_until_offset(file, wfp, line_offset)
+        else:
+            # Apply line filter to remove headers, comments, and imports from the beginning (if enabled)
+            if self.skip_headers:
+                line_offset = self.header_filter.filter(file, decoded_contents)
+                if line_offset > 0:
+                    wfp = self.__strip_lines_until_offset(file, wfp, line_offset)
+            # Strip unwanted snippets
+            if self.strip_snippet_ids:
+                wfp = self.__strip_snippets(file, wfp)
         return wfp
 
     def calc_hpsm(self, content):
