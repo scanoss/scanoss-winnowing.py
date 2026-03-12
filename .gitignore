@@ -24,4 +24,5 @@ bad*.txt
 *.zip
 local-*.txt
 *.so
+!scanoss.json
 
