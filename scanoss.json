@@ -1,0 +1,22 @@
+{
+  "settings": {
+    "skip": {
+      "patterns": {
+        "scanning": [
+          "tests/data/test_src_files.tar.gz",
+          "tests/data/src"
+        ]
+      },
+      "sizes": {}
+    }
+  },
+  "bom": {
+    "include": [
+      {
+        "purl": "pkg:github/scanoss/scanoss-winnowing.py"
+      }
+    ],
+    "remove": []
+  }
+}
+

@@ -12,6 +12,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added error handling for `is_binary` check to catch `RuntimeError` and default to treating the file as binary
 ### Fixed
 - Fixed `--skip-headers` incorrectly identifying continuation lines inside multi-line import blocks
+### Added
+- Added `scanoss.yml` workflow file
 
 ## [0.7.0] - 2025-12-17
 ### Added
