@@ -14,6 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fixed `--skip-headers` incorrectly identifying continuation lines inside multi-line import blocks
 ### Added
 - Added `scanoss.yml` workflow file
+- Upgraded `cibuildwheel` from v2.20.0 to v3.4.0 to fix 429 rate-limit errors during wheel builds across all platforms
 
 ## [0.7.0] - 2025-12-17
 ### Added
