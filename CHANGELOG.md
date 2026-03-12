@@ -7,9 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [0.7.1] - 2026-03-11
+## [0.8.0] - 2026-03-12
 ### Changed
 - Added error handling for `is_binary` check to catch `RuntimeError` and default to treating the file as binary
+### Fixed
+- Fixed `--skip-headers` incorrectly identifying continuation lines inside multi-line import blocks
 
 ## [0.7.0] - 2025-12-17
 ### Added
@@ -76,5 +78,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 [0.5.4]: https://github.com/scanoss/scanoss-winnowing.py/compare/v0.5.3...v0.5.4
 [0.6.0]: https://github.com/scanoss/scanoss-winnowing.py/compare/v0.5.4...v0.6.0
 [0.7.0]: https://github.com/scanoss/scanoss-winnowing.py/compare/v0.6.0...v0.7.0
-[0.7.1]: https://github.com/scanoss/scanoss-winnowing.py/compare/v0.7.0...v0.7.1
+[0.8.0]: https://github.com/scanoss/scanoss-winnowing.py/compare/v0.7.0...v0.8.0
 
