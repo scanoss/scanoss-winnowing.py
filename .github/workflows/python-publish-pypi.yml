@@ -115,6 +115,8 @@ jobs:
     needs: [ build_wheels, package_source ]
     name: Upload Wheels
     runs-on: [ubuntu-latest]
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v4
 
